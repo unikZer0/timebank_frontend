@@ -30,7 +30,6 @@ export interface User extends UserStub {
 export interface Service {
   id: number;
   title: string;
-  category: string;
   duration: number;
   unit: 'ชั่วโมง' | 'นาที' | 'วัน' | string;
   imageUrl: string;
@@ -50,7 +49,6 @@ export interface Reactions {
 export interface ServiceRequest {
     id: number;
     title: string;
-    category: string;
     description: string;
     user: UserStub;
     comments: Comment[];

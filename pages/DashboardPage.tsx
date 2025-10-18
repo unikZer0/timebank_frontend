@@ -13,7 +13,6 @@ import {
     CheckCircleIcon,
     UserCircleIcon
 } from '@heroicons/react/24/solid';
-import { SparklesIcon } from '@heroicons/react/24/outline';
 import DashboardPageSkeleton from '../components/DashboardPageSkeleton';
 
 const ActionCard: React.FC<{ to: string; icon: React.ElementType; title: string; isPrimary?: boolean }> = ({ to, icon: Icon, title, isPrimary }) => (
@@ -58,30 +57,9 @@ const StatusItem: React.FC<{ request: ServiceRequest }> = ({ request }) => {
     );
 };
 
-const AIRecommendationCard: React.FC<{ request: ServiceRequest }> = ({ request }) => (
-    <Link to={`/request/${request.id}`} className="block p-4 bg-accent-light border border-accent/20 rounded-xl transition-all duration-300 hover:border-accent hover:bg-accent/10">
-        <p className="font-bold text-accent">{request.title}</p>
-        <p className="text-sm text-secondary-text mt-1">by {request.user.name} • {request.duration} {request.unit}</p>
-    </Link>
-);
-
-
 const DashboardPage: React.FC = () => {
   const { currentUser } = useUser();
   const { requests } = useData();
-  const [recommendations, setRecommendations] = React.useState<ServiceRequest[]>([]);
-  const [loadingRecs, setLoadingRecs] = React.useState(true);
-
-  React.useEffect(() => {
-    if (currentUser && requests.length > 0) {
-      setLoadingRecs(true);
-      const userContext = `User has skills: ${currentUser.skills.join(', ')}. Bio: ${currentUser.bio}`;
-      const availableRequests = requests.filter(r => r.user.id !== currentUser.id && r.status === 'open');
-     
-    } else {
-      setLoadingRecs(false);
-    }
-  }, [currentUser, requests]);
 
 
   if (!currentUser) {
@@ -113,29 +91,6 @@ const DashboardPage: React.FC = () => {
           <p className="text-sm font-semibold text-secondary-text bg-accent-light px-3 py-1 rounded-full inline-block">1 เครดิต = 1 ชั่วโมง</p>
       </div>
       
-      {/* AI Recommendations */}
-      <div>
-        <h2 className="text-2xl font-bold text-primary-text mb-4 font-prompt flex items-center">
-            <SparklesIcon className="w-6 h-6 text-accent mr-2" />
-            Recommended For You
-        </h2>
-        <div className="bg-surface border border-border-color rounded-2xl p-4 space-y-3 shadow-sm">
-            {loadingRecs ? (
-                <>
-                    <div className="h-16 bg-muted rounded-xl animate-pulse"></div>
-                    <div className="h-16 bg-muted rounded-xl animate-pulse"></div>
-                </>
-            ) : recommendations.length > 0 ? (
-                recommendations.map(req => <AIRecommendationCard key={req.id} request={req} />)
-            ) : (
-                <div className="text-center py-4 text-secondary-text">
-                    <p>No specific recommendations for you right now.</p>
-                    <p className="text-sm">Explore all <Link to="/search" className="text-accent underline">open requests</Link>.</p>
-                </div>
-            )}
-        </div>
-      </div>
-
       {/* Quick Actions */}
       <div className="space-y-4">
           {/* Request Help - Full width with highlight */}

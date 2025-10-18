@@ -4,6 +4,10 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import TermsAndServicePage from './pages/TermsAndServicePage';
+import PersonalDataPage from './pages/PersonalDataPage';
+import SkillsPage from './pages/SkillsPage';
+import VerificationPage from './pages/VerificationPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import SearchPage from './pages/SearchPage';
@@ -69,7 +73,11 @@ const App: React.FC = () => {
                 {/* Public Routes */}
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/register" element={<TermsAndServicePage />} />
+                <Route path="/register/terms" element={<TermsAndServicePage />} />
+                <Route path="/register/personal-data" element={<PersonalDataPage />} />
+                <Route path="/register/skills" element={<SkillsPage />} />
+                <Route path="/register/verification" element={<VerificationPage />} />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/contact" element={<ContactPage />} />

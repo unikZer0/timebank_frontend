@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CustomSelect from '../components/CustomSelect';
 import FormField from '../components/FormField';
 import FormTextArea from '../components/FormTextArea';
 import { useData } from '../context/DataContext';
@@ -20,20 +19,10 @@ const ProgressBar: React.FC<{ step: number; totalSteps: number }> = ({ step, tot
     );
 };
 
-const categoryOptions = [
-  { value: 'การศึกษา', label: 'Education' },
-  { value: 'งานบ้าน', label: 'Household' },
-  { value: 'งานช่าง', label: 'Handiwork' },
-  { value: 'เทคโนโลยี', label: 'Technology' },
-  { value: 'ดูแลสวน', label: 'Gardening' },
-  { value: 'อื่นๆ', label: 'Other' },
-];
-
 const CreateServicePage: React.FC = () => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     title: '',
-    category: '',
     duration: '',
     unit: 'ชั่วโมง',
     date: '',
@@ -52,17 +41,12 @@ const CreateServicePage: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSelectChange = (value: string) => {
-    setFormData(prev => ({...prev, category: value}));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
 
     const serviceData: Omit<Service, 'id'> = {
       title: formData.title,
-      category: formData.category,
       duration: parseInt(formData.duration) || 1,
       unit: formData.unit,
       user: { 
@@ -70,7 +54,7 @@ const CreateServicePage: React.FC = () => {
         name: `${currentUser.firstName} ${currentUser.lastName}`, 
         avatarUrl: currentUser.avatarUrl || `https://i.pravatar.cc/150?u=${currentUser.email}`
       },
-      imageUrl: `https://source.unsplash.com/random/800x600?${formData.category}`
+      imageUrl: `https://source.unsplash.com/random/800x600?service`
     };
 
     addService(serviceData);
@@ -95,13 +79,6 @@ const CreateServicePage: React.FC = () => {
               value={formData.title}
               onChange={handleChange}
               required
-            />
-            <CustomSelect 
-              label="Category"
-              options={categoryOptions}
-              value={formData.category}
-              onChange={handleSelectChange}
-              placeholder="-- Select a Category --"
             />
             <div className="flex justify-end pt-4">
                 <button type="button" onClick={nextStep} className="px-6 py-2 bg-accent text-white font-semibold rounded-md hover:bg-accent-hover transition-all duration-200 active:scale-95 transform">Next</button>

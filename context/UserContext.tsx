@@ -4,11 +4,12 @@ import { User, UserStats } from '../types';
 import { allAchievements } from '../pages/AchievementsPage';
 import { useNotification } from './NotificationContext';
 import { apiLogin } from '../services/apiService';
+import { useToast } from './ToastContext';
 
 interface UserContextType {
   currentUser: User | null;
   users: User[];
-  login: (identifier: string, password: string, remember?: boolean, currentLat?: number, currentLon?: number) => Promise<{ success: boolean; message?: string }>;
+  login: (identifier: string, password: string, remember?: boolean) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   register: (userData: Omit<User, 'id' | 'timeCredit' | 'stats' | 'achievements' | 'name' | 'family'> & { idCardNumber: string }) => void;
   updateUserStats: (statsUpdate: Partial<UserStats>) => void;
@@ -30,6 +31,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return savedUser ? JSON.parse(savedUser) : null;
   });
   const { showTrophy } = useNotification();
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (currentUser) {
@@ -44,12 +46,44 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [users]);
 
 
-  const login = async (identifier: string, password: string, remember: boolean = false, currentLat?: number, currentLon?: number) => {
+  const getCurrentLocation = (): Promise<{ lat: number; lon: number } | null> => {
+    return new Promise((resolve, reject) => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            resolve({
+              lat: position.coords.latitude,
+              lon: position.coords.longitude,
+            });
+          },
+          (error) => {
+            if (error.code === 1) { // PERMISSION_DENIED
+              showToast("Location access is required. Please enable it in your browser settings.", "error");
+              reject(new Error("User denied Geolocation"));
+            } else {
+              console.error("Geolocation error:", error);
+              showToast("Could not get location. Please try again.", "error");
+              reject(error);
+            }
+          }
+        );
+      } else {
+        console.error("Geolocation is not supported by this browser.");
+        showToast("Geolocation is not supported by your browser.", "error");
+        reject(new Error("Geolocation not supported"));
+      }
+    });
+  };
+
+  const login = async (identifier: string, password: string, remember: boolean = false) => {
     try {
-      const payload: any = { identifier, password };
-      if (typeof remember === 'boolean') payload.remember = remember;
-      if (typeof currentLat !== 'undefined') payload.currentLat = currentLat;
-      if (typeof currentLon !== 'undefined') payload.currentLon = currentLon;
+      const location = await getCurrentLocation();
+
+      const payload: any = { identifier, password, remember };
+      if (location) {
+        payload.currentLat = location.lat;
+        payload.currentLon = location.lon;
+      }
 
       const data = await apiLogin(payload);
 
@@ -93,6 +127,9 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       return { success: false, message: 'Invalid response from server' };
     } catch (err: any) {
+      if (err.message === "User denied Geolocation" || err.message === "Geolocation not supported") {
+        return { success: false, message: err.message };
+      }
       // Re-throw or return structured error
       const status = err?.status || 500;
       if (status === 400) return { success: false, message: 'Missing field' };

@@ -3,65 +3,12 @@ import React, { createContext, useState, useContext, ReactNode, useEffect } from
 import { User, UserStats } from '../types';
 import { allAchievements } from '../pages/AchievementsPage';
 import { useNotification } from './NotificationContext';
-
-// MOCK USER DATA
-const initialUsers: User[] = [
-  {
-    id: 1,
-    firstName: 'อาทิตย์',
-    lastName: 'ใจดี',
-    email: 'test@user.com',
-    name: 'อาทิตย์ ใจดี',
-    idCardNumber: '1234567890123',
-    family: [2, 3],
-    bio: 'รักการช่วยเหลือผู้อื่นและแบ่งปันความรู้ด้านเทคโนโลยี',
-    skills: ['สอนคอมพิวเตอร์', 'ซ่อมอุปกรณ์อิเล็กทรอนิกส์', 'ให้คำปรึกษา'],
-    timeCredit: 25,
-    avatarUrl: 'https://i.pravatar.cc/150?img=7',
-    stats: {
-      hoursGiven: 12,
-      hoursReceived: 4,
-      peopleHelped: 5,
-      servicesCreated: 2,
-    },
-    achievements: [1, 5],
-  },
-  {
-    id: 2,
-    firstName: 'มานี',
-    lastName: 'ใจงาม',
-    email: 'manee@user.com',
-    name: 'มานี ใจงาม',
-    idCardNumber: '0987654321098',
-    family: [1],
-    bio: 'ชอบทำสวนและทำอาหาร',
-    skills: ['ทำสวน', 'ทำอาหารไทย'],
-    timeCredit: 10,
-    avatarUrl: 'https://i.pravatar.cc/150?img=8',
-    stats: { hoursGiven: 5, hoursReceived: 8, peopleHelped: 2, servicesCreated: 1 },
-    achievements: [],
-  },
-  {
-    id: 3,
-    firstName: 'สมชาย',
-    lastName: 'สามารถ',
-    email: 'somchai@user.com',
-    name: 'สมชาย สามารถ',
-    idCardNumber: '1122334455667',
-    family: [1],
-    bio: 'นักกีฬาและช่างซ่อม',
-    skills: ['ซ่อมจักรยาน', 'สอนออกกำลังกาย'],
-    timeCredit: 15,
-    avatarUrl: 'https://i.pravatar.cc/150?img=3',
-    stats: { hoursGiven: 20, hoursReceived: 10, peopleHelped: 8, servicesCreated: 4 },
-    achievements: [1],
-  },
-];
+import { apiLogin } from '../services/apiService';
 
 interface UserContextType {
   currentUser: User | null;
   users: User[];
-  login: (email: string, password?: string) => void;
+  login: (identifier: string, password: string, remember?: boolean, currentLat?: number, currentLon?: number) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   register: (userData: Omit<User, 'id' | 'timeCredit' | 'stats' | 'achievements' | 'name' | 'family'> & { idCardNumber: string }) => void;
   updateUserStats: (statsUpdate: Partial<UserStats>) => void;
@@ -75,7 +22,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [users, setUsers] = useState<User[]>(() => {
     const savedUsers = localStorage.getItem('timebank-users');
-    return savedUsers ? JSON.parse(savedUsers) : initialUsers;
+    return savedUsers ? JSON.parse(savedUsers) : [];
   });
 
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -97,9 +44,62 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [users]);
 
 
-  const login = (email: string, password?: string) => {
-    const user = users.find(u => u.email === email);
-    setCurrentUser(user || users[0]); 
+  const login = async (identifier: string, password: string, remember: boolean = false, currentLat?: number, currentLon?: number) => {
+    try {
+      const payload: any = { identifier, password };
+      if (typeof remember === 'boolean') payload.remember = remember;
+      if (typeof currentLat !== 'undefined') payload.currentLat = currentLat;
+      if (typeof currentLon !== 'undefined') payload.currentLon = currentLon;
+
+      const data = await apiLogin(payload);
+
+      // Expecting { user, accessToken, refreshToken }
+      if (data?.accessToken) {
+        localStorage.setItem('accessToken', data.accessToken);
+      }
+      if (data?.refreshToken) {
+        localStorage.setItem('refreshToken', data.refreshToken);
+      }
+
+      if (data?.user) {
+        // Map API user shape to local `User` where possible. We'll set minimal fields.
+        const apiUser = data.user;
+        const mappedUser: User = {
+          id: apiUser.userId || Date.now(),
+          name: apiUser.name || apiUser.email || 'User',
+          firstName: apiUser.firstName || '',
+          lastName: apiUser.lastName || '',
+          email: apiUser.email || identifier,
+          idCardNumber: apiUser.idCardNumber || '',
+          bio: apiUser.bio || '',
+          skills: apiUser.skills || [],
+          timeCredit: typeof apiUser.timeCredit === 'number' ? apiUser.timeCredit : 0,
+          stats: apiUser.stats || { hoursGiven: 0, hoursReceived: 0, peopleHelped: 0, servicesCreated: 0 },
+          achievements: apiUser.achievements || [],
+          family: apiUser.family || [],
+          avatarUrl: apiUser.avatarUrl,
+        };
+
+        setCurrentUser(mappedUser);
+        // Optionally add or update users list
+        setUsers(prev => {
+          const exists = prev.find(u => u.id === mappedUser.id);
+          if (exists) return prev.map(u => u.id === mappedUser.id ? mappedUser : u);
+          return [...prev, mappedUser];
+        });
+
+        return { success: true };
+      }
+
+      return { success: false, message: 'Invalid response from server' };
+    } catch (err: any) {
+      // Re-throw or return structured error
+      const status = err?.status || 500;
+      if (status === 400) return { success: false, message: 'Missing field' };
+      if (status === 401) return { success: false, message: 'Invalid password' };
+      if (status === 403) return { success: false, message: 'Account pending verification' };
+      return { success: false, message: err?.message || 'Server error' };
+    }
   };
 
   const logout = () => {

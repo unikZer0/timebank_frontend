@@ -1,0 +1,876 @@
+1. Authentication APIs  (/api/auth ) 
+• POST  /api/auth/register  - ລົງທະບຽນຜ ູ້ໃຊູ້ໃໝ່ 
+{ 
+            "method" : "POST", 
+            "path": "/api/auth/register" , 
+            "description" : "ລົງທະບຽນຜ ູ້ໃຊູ້ໃໝ່", 
+            "auth_required" : false,  
+            "request_body" : { 
+              "first_name" : "string (required)" , 
+              "last_name" : "string (required)" ,  
+              "email": "string (required)" , 
+              "phone": "string (required)" , 
+              "password" : "string (required)" , 
+              "lat": "number (required)" , 
+              "lon": "number (required)" , 
+              "national_id" : "string (required)" , 
+              "skills" : "array (optional)" , 
+              "available_hours" : "number (optional)" , 
+              "embedding" : "array (optional)" , 
+              "dob": "string (optional)"  
+            }, 
+            "response_success" : { 
+              "status" : 201, 
+              "body": { 
+                "message" : "Registration successful. Your account is pending 
+verification..." , 
+                "user": { 
+                  "id": "number" , 
+                  "email": "string" , 
+                  "role": "string" , 
+                  "status" : "string"  
+                }, 
+                "token": "string"  
+              } 
+            }, 
+            "response_error" : { 
+              "400": "All fields including national_id and location are required" , 
+              "409": "User already registered and verified / Email already registered / 
+Phone already registered" , 
+              "502": "Failed to fetch external data" , 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• POST /api/auth/login  - ເຂົູ້າສ ່ລະບົບ 
+{ 
+            "method" : "POST", 
+            "path": "/api/auth/login" , 
+            "description" : "ເຂົູ້າສ ່ລະບົບ", 
+            "auth_required" : false,  
+            "request_body" : { 
+              "identifier" : "string (required) - email or phone" , 
+              "password" : "string (required)" , 
+              "remember" : "boolean (optional)" , 
+              "currentLat" : "number (optional)" , 
+              "currentLon" : "number (optional)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "user": { 
+                  "userId" : "number" , 
+                  "email": "string" , 
+                  "role": "string"  
+                }, 
+                "accessToken" : "string" , 
+                "refreshToken" : "string"  
+              } 
+            }, 
+            "response_error" : { 
+              "400": "Identifier and password required" , 
+              "401": "Invalid credentials" , 
+              "403": "Account pending verification / Account verification was rejected" , 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• POST  /api/auth/refresh  - ເຮັດໃໝ່ token  
+{ 
+            "method" : "POST", 
+            "path": "/api/auth/refresh" , 
+            "description" : "ເຮັດໃໝ່ token", 
+            "auth_required" : false,  
+            "request_body" : { 
+              "token": "string (required) - refresh token"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "accessToken" : "string"  
+              } 
+            }, 
+            "response_error" : { 
+              "400": "Refresh token required" , 
+              "403": "Invalid refresh token" , 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• POST /api/auth/forgot -password  - ລືມລະຫັດຜ່ານ 
+{ 
+            "method" : "POST", 
+            "path": "/api/auth/forgot -password" , 
+            "description" : "ລືມລະຫັດຜ່ານ", 
+            "auth_required" : false,  
+            "request_body" : { 
+              "email": "string (required)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "message" : "If the email exists, a reset link has been sent" , 
+                "resetToken" : "string (only in development)"  
+              } 
+            }, 
+            "response_error" : { 
+              "400": "Email is required" , 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• POST /api/auth/reset -password  - ຣີເຊັດລະຫັດຜ່ານ 
+          { 
+            "method" : "POST", 
+            "path": "/api/auth/reset -password" , 
+            "description" : "ຣີເຊັດລະຫັດຜ່ານ", 
+            "auth_required" : false,  
+            "request_body" : { 
+              "token": "string (required)" , 
+              "newPassword" : "string (required)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "message" : "Password reset successfully"  
+              } 
+            }, 
+            "response_error" : { 
+              "400": "Token and new password are required / Invalid or expired reset 
+token", 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• POST /api/auth/logout  - ອອກຈາກລະບົບ (ຕູ້ອງມີ auth)  
+{ 
+            "method" : "POST", 
+            "path": "/api/auth/logout" , 
+            "description" : "ອອກຈາກລະບົບ", 
+            "auth_required" : true, 
+            "request_body" : {}, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "message" : "Logged out successfully"  
+              } 
+            }, 
+            "response_error" : { 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• GET /api/auth/auto -login  - ເຂົູ້າສ ່ລະບົບອັດຕະໂນມັດ 
+•           { 
+            "method" : "GET", 
+            "path": "/api/auth/auto -login", 
+            "description" : "ເຂົູ້າສ ່ລະບົບອັດຕະໂນມັດ", 
+            "auth_required" : false,  
+            "request_body" : {}, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "user": { 
+                  "userId" : "number" , 
+                  "email": "string" , 
+                  "role": "string"  
+                }, 
+                "accessToken" : "string" , 
+                "refreshToken" : "string" , 
+                "autoLogin" : true 
+              } 
+            }, 
+            "response_error" : { 
+              "401": "No valid remember me token" , 
+              "500": "Internal server error"  
+            } 
+          }, 
+2. Job Management APIs  (/api) 
+• GET /api/jobs  - ດຶງຂ ູ້ມ ນວຽກທັງໝົດ (ສາທາລະນະ) 
+{ 
+            "method" : "GET", 
+            "path": "/api/jobs" , 
+            "description" : "ດຶງຂ ູ້ມ ນວຽກທັງໝົດ", 
+            "auth_required" : false,  
+            "query_params" : { 
+              "limit": "number (optional, default: 50)" , 
+              "offset" : "number (optional, default: 0)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "jobs": "array", 
+                "pagination" : { 
+                  "limit": "number" , 
+                  "offset" : "number" , 
+                  "count": "number"  
+                } 
+              } 
+            }, 
+            "response_error" : { 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• GET /api/jobs/:id  - ດຶງຂ ູ້ມ ນວຽກຕາມ ID (ສາທາລະນະ ) 
+          { 
+            "method" : "GET", 
+            "path": "/api/jobs/:id" , 
+            "description" : "ດຶງຂ ູ້ມ ນວຽກຕາມ ID", 
+            "auth_required" : false,  
+            "path_params" : { 
+              "id": "number (required)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "job": "object"  
+              } 
+            }, 
+            "response_error" : { 
+              "404": "Job not found" , 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• POST /api/jobs  - ສູ້າງວຽກໃໝ່ (ຕູ້ອງມີ auth)  
+{ 
+            "method" : "POST", 
+            "path": "/api/jobs" , 
+            "description" : "ສູ້າງວຽກໃໝ່", 
+            "auth_required" : true, 
+            "request_body" : { 
+              "title": "string (required)" , 
+              "description" : "string (required)" , 
+              "required_skills" : "array (optional)" , 
+              "location_lat" : "number (optional)" , 
+              "location_lon" : "number (optional)" , 
+              "time_balance_hours" : "number (required)"  
+            }, 
+            "response_success" : { 
+              "status" : 201, 
+              "body": { 
+                "success" : true, 
+                "job": "object" , 
+                "message" : "Job created successfully"  
+              } 
+            }, 
+            "response_error" : { 
+              "400": "Title, description, and time balance hours are required / Time 
+balance hours must be positive" , 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• GET /api/jobs/user/my -jobs  - ດຶງວຽກຂອງຜ ູ້ໃຊູ້ (ຕູ້ອງມີ auth)  
+•  { 
+            "method" : "GET", 
+            "path": "/api/jobs/user/my -jobs", 
+            "description" : "ດຶງວຽກຂອງຜ ູ້ໃຊູ້", 
+            "auth_required" : true, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "jobs": "array" 
+              } 
+            }, 
+            "response_error" : { 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• PUT /api/jobs/:id  - ແກູ້ໄຂວຽກ (ຕູ້ອງມີ auth)  
+ { 
+            "method" : "PUT", 
+            "path": "/api/jobs/:id" , 
+            "description" : "ແກູ້ໄຂວຽກ", 
+            "auth_required" : true, 
+            "path_params" : { 
+              "id": "number (required)"  
+            }, 
+            "request_body" : { 
+              "title": "string (optional)" , 
+              "description" : "string (optional)" , 
+              "required_skills" : "array (optional)" , 
+              "location_lat" : "number (optional)" , 
+              "location_lon" : "number (optional)" , 
+              "time_balance_hours" : "number (optional)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "job": "object" , 
+                "message" : "Job updated successfully"  
+              } 
+            }, 
+            "response_error" : { 
+              "404": "Job not found or unauthorized" , 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• DELETE /api/jobs/:id  - ລຶບວຽກ (ຕູ້ອງມີ auth)  
+{ 
+            "method" : "DELETE" , 
+            "path": "/api/jobs/:id" , 
+            "description" : "ລຶບວຽກ", 
+            "auth_required" : true, 
+            "path_params" : { 
+              "id": "number (required)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "message" : "Job deleted successfully"  
+              } 
+            }, 
+            "response_error" : { 
+              "404": "Job not found or unauthorized" , 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+          } 
+ 
+3. Job Application APIs  (/api) 
+• POST /api/jobapp  - ສະໝັກວຽກ (ຕູ້ອງມີ auth)  
+{ 
+            "method" : "POST", 
+            "path": "/api/jobapp" , 
+            "description" : "ສະໝັກວຽກ", 
+            "auth_required" : true, 
+            "request_body" : { 
+              "userId" : "number (optional - uses token if not provided)" , 
+              "jobId": "number (required)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "applicationId" : "number" , 
+                "message" : "Application submitted successfully"  
+              } 
+            }, 
+            "response_error" : { 
+              "400": "You have already applied for this job" , 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• GET /api/jobapp/user/:userId  - ດຶງການສະໝັກວຽກຂອງຜ ູ້ໃຊູ້ (ຕູ້ອງມີ auth)  
+{ 
+            "method" : "GET", 
+            "path": "/api/jobapp/user/:userId" , 
+            "description" : "ດຶງການສະໝັກວຽກຂອງຜ ູ້ໃຊູ້", 
+            "auth_required" : true, 
+            "path_params" : { 
+              "userId" : "number (required)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "applications" : "array" 
+              } 
+            }, 
+            "response_error" : { 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• PUT /api/jobapp/:id/status  - ອັບເດດສະຖານະການສະໝັກວຽກ (ຕູ້ອງມີ auth) 
+{ 
+            "method" : "PUT", 
+            "path": "/api/jobapp/:id/status" , 
+            "description" : "ອັບເດດສະຖານະການສະໝັກວຽກ", 
+            "auth_required" : true, 
+            "path_params" : { 
+              "id": "number (required)"  
+            }, 
+            "request_body" : { 
+              "status" : "string (required)" , 
+              "employerId" : "number (optional)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "message" : "Status updated"  
+              } 
+            }, 
+            "response_error" : { 
+              "403": "Unauthorized or application not found" , 
+              "500": "Internal server error"  
+            } 
+          } 
+•  
+4. Transfer/Wallet APIs  (/api) 
+• POST  /api/transfer  - ໂອນເວລາ (ຕູ້ອງມີ auth)  
+{ 
+            "method" : "POST", 
+            "path": "/api/transfer" , 
+            "description" : "ໂອນເວລາ" , 
+            "auth_required" : true, 
+            "request_body" : { 
+              "toUserId" : "number (required)" , 
+              "hours": "number (required)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "message" : "Hours transfer completed successfully" , 
+                "data": { 
+                  "transaction" : { 
+                    "id": "number" , 
+                    "hours": "number" , 
+                    "type": "string" , 
+                    "created_at" : "string"  
+                  }, 
+                  "newBalance" : "number"  
+                } 
+              } 
+            }, 
+            "response_error" : { 
+              "400": "Recipient user ID and hours are required / Hours must be a positive 
+number / Cannot transfer to yourself / Insufficient hours balance" , 
+              "403": "Transfers are only allowed between family members" , 
+              "500": "Transfer failed. Please try again."  
+            } 
+          }, 
+ 
+• GET /api/transfer/history  - ດຶງປະຫວັດການໂອນ (ຕູ້ອງມີ auth)  
+{ 
+            "method" : "GET", 
+            "path": "/api/transfer/history" , 
+            "description" : "ດຶງປະຫວັດການໂອນ", 
+            "auth_required" : true, 
+            "query_params" : { 
+              "limit": "number (optional, default: 50)" , 
+              "offset" : "number (optional, default: 0)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "data": "array", 
+                "pagination" : { 
+                  "limit": "number" , 
+                  "offset" : "number" , 
+                  "count": "number"  
+                } 
+              } 
+            }, 
+            "response_error" : { 
+              "500": "Failed to fetch transfer history"  
+            } 
+          }, 
+ 
+• GET /api/transfer/family  - ດຶງສະມາຊິກຄອບຄົວ (ຕູ້ອງມີ auth)  
+{ 
+            "method" : "GET", 
+            "path": "/api/transfer/family" , 
+            "description" : "ດຶງສະມາຊິກຄອບຄົວ", 
+            "auth_required" : true, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "data": "array", 
+                "count": "number"  
+              } 
+            }, 
+            "response_error" : { 
+              "500": "Failed to fetch family members"  
+            } 
+          }, 
+ 
+• GET /api/wallet/balance  - ດຶງຍອດເງິນໃນກະເປົົ໋າ (ຕູ້ອງມີ auth)  
+{ 
+            "method" : "GET", 
+            "path": "/api/wallet/balance" , 
+            "description" : "ດຶງຍອດເງິນໃນກະເປົົ໋າ", 
+            "auth_required" : true, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "data": { 
+                  "user_id" : "number" , 
+                  "hours": "number"  
+                } 
+              } 
+            }, 
+            "response_error" : { 
+              "500": "Failed to fetch wallet balance"  
+            } 
+          } 
+ 
+5. Notification APIs  (/api/notifications ) 
+• GET /api/notifications  - ດຶງການແຈູ້ງເຕືອນຂອງຜ ູ້ໃຊູ້ (ຕູ້ອງມີ auth)  
+ { 
+            "method" : "GET", 
+            "path": "/api/notifications" , 
+            "description" : "ດຶງການແຈູ້ງເຕືອນຂອງຜ ູ້ໃຊູ້", 
+            "auth_required" : true, 
+            "query_params" : { 
+              "limit": "number (optional, default: 50)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "data": "array" 
+              } 
+            }, 
+            "response_error" : { 
+              "500": "Failed to fetch notifications"  
+            } 
+          }, 
+ 
+• PATCH /api/notifications/:notificationId/read  - ໝາຍວ່າອ່ານແລູ້ວ (ຕູ້ອງມີ auth) 
+ { 
+            "method" : "PATCH", 
+            "path": "/api/notifications/:notificationId/read" , 
+            "description" : "ໝາຍວ່າອ່ານແລູ້ວ", 
+            "auth_required" : true, 
+            "path_params" : { 
+              "notificationId" : "number (required)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "message" : "Notification marked as read"  
+              } 
+            }, 
+            "response_error" : { 
+              "404": "Notification not found" , 
+              "500": "Failed to mark notification as read"  
+            } 
+          }, 
+ 
+• GET /api/notifications/unread -count  - ດຶງຈ ານວນການແຈູ້ງເຕືອນທີ່ຍັງບ ່ໄດູ້ອ່ານ (ຕູ້ອງມີ 
+auth) 
+{ 
+            "method" : "GET", 
+            "path": "/api/notifications/unread -count", 
+            "description" : "ດຶງຈ ານວນການແຈູ້ງເຕືອນທີ່ຍັງບ ່ໄດູ້ອ່ານ", 
+            "auth_required" : true, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "count": "number"  
+              } 
+            }, 
+            "response_error" : { 
+              "500": "Failed to fetch unread count"  
+            } 
+          } 
+ 
+6. Admin Management APIs  (/api/admin ) 
+• GET /api/admin/verification  - ດຶງຜ ູ້ໃຊູ້ທີ່ຍັງບ ່ໄດູ້ຢັູ້ງຢືນ (Admin)  
+{ 
+            "method" : "GET", 
+            "path": "/api/admin/verification" , 
+            "description" : "ດຶງຜ ູ້ໃຊູ້ທີ່ຍັງບ ່ໄດູ້ຢັູ້ງຢືນ", 
+            "auth_required" : true, 
+            "admin_required" : true, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "data": "array", 
+                "count": "number"  
+              } 
+            }, 
+            "response_error" : { 
+              "500": "Failed to fetch unverified users"  
+            } 
+          }, 
+ 
+• GET /api/admin/verification/:userId  - ດຶງລາຍລະອຽດຜ ູ້ໃຊູ້ (Admin)  
+{ 
+            "method" : "GET", 
+            "path": "/api/admin/verification/:userId" , 
+            "description" : "ດຶງລາຍລະອຽດຜ ູ້ໃຊູ້", 
+            "auth_required" : true, 
+            "admin_required" : true, 
+            "path_params" : { 
+              "userId" : "number (required)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "data": "object"  
+              } 
+            }, 
+            "response_error" : { 
+              "400": "User ID is required" , 
+              "404": "User not found" , 
+              "500": "Failed to fetch user details"  
+            } 
+          }, 
+ 
+• PATCH /api/admin/verification/:userId/verify  - ຢັູ້ງຢືນຜ ູ້ໃຊູ້ (Admin)  
+{ 
+            "method" : "PATCH", 
+            "path": "/api/admin/verification/:userId/verify" , 
+            "description" : "ຢັູ້ງຢືນຜ ູ້ໃຊູ້", 
+            "auth_required" : true, 
+            "admin_required" : true, 
+            "path_params" : { 
+              "userId" : "number (required)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "message" : "User verified successfully and wallet created" , 
+                "data": { 
+                  "user": { 
+                    "id": "number" , 
+                    "email": "string" , 
+                    "status" : "string"  
+                  }, 
+                  "wallet" : { 
+                    "user_id" : "number" , 
+                    "balance" : "number"  
+                  } 
+                } 
+              } 
+            }, 
+            "response_error" : { 
+              "400": "User ID is required" , 
+              "404": "User not found or already processed" , 
+              "500": "Failed to verify user"  
+            } 
+          }, 
+ 
+• PATCH /api/admin/verification/:userId/reject  - ປະຕິເສດຜ ູ້ໃຊູ້ (Admin) 
+{ 
+            "method" : "PATCH", 
+            "path": "/api/admin/verification/:userId/reject" , 
+            "description" : "ປະຕິເສດຜ ູ້ໃຊູ້", 
+            "auth_required" : true, 
+            "admin_required" : true, 
+            "path_params" : { 
+              "userId" : "number (required)"  
+            }, 
+            "request_body" : { 
+              "rejectionReason" : "string (optional)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "success" : true, 
+                "message" : "User rejected successfully" , 
+                "data": { 
+                  "id": "number" , 
+                  "email": "string" , 
+                  "status" : "string" , 
+                  "rejection_reason" : "string"  
+                } 
+              } 
+            }, 
+            "response_error" : { 
+              "400": "User ID is required" , 
+              "404": "User not found or already processed" , 
+              "500": "Failed to reject user"  
+            } 
+          } 
+ 
+7. Admin Job Matching APIs  (/api) 
+• GET /api/admin/jobs  - ດຶງວຽກສ າລັບ Admin (Admin)  
+ { 
+            "method" : "GET", 
+            "path": "/api/admin/jobs" , 
+            "description" : "ດຶງວຽກສ າລັບ Admin", 
+            "auth_required" : true, 
+            "admin_required" : true, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "jobs": "array" 
+              } 
+            }, 
+            "response_error" : { 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• GET /api/admin/jobs -for-matching  - ດຶງວຽກສ າລັບການຈັບຄ ່ (Admin)  
+{ 
+            "method" : "GET", 
+            "path": "/api/admin/jobs -for-matching" , 
+            "description" : "ດຶງວຽກສ າລັບການຈັບຄ ່", 
+            "auth_required" : true, 
+            "admin_required" : true, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "jobs": "array" 
+              } 
+            }, 
+            "response_error" : { 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• GET /api/admin/jobs/:job_id/applicants  - ດຶງຜ ູ້ສະໝັກວຽກ (Admin)  
+{ 
+            "method" : "GET", 
+            "path": "/api/admin/jobs/:job_id/applicants" , 
+            "description" : "ດຶງຜ ູ້ສະໝັກວຽກ", 
+            "auth_required" : true, 
+            "admin_required" : true, 
+            "path_params" : { 
+              "job_id" : "number (required)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "applicants" : "array" 
+              } 
+            }, 
+            "response_error" : { 
+              "400": "Invalid job_id parameter" , 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• GET /api/admin/users -with-line-id - ດຶງຜ ູ້ໃຊູ້ທີ່ມີ LINE ID (Admin)  
+          { 
+            "method" : "GET", 
+            "path": "/api/admin/users -with-line-id", 
+            "description" : "ດຶງຜ ູ້ໃຊູ້ທີ່ມີ LINE ID" , 
+            "auth_required" : true, 
+            "admin_required" : true, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "users": "array" 
+              } 
+            }, 
+            "response_error" : { 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• POST /api/admin/matches  - ສູ້າງການຈັບຄ ່ໃໝ່ (Admin)  
+          { 
+            "method" : "POST", 
+            "path": "/api/admin/matches" , 
+            "description" : "ສູ້າງການຈັບຄ ່ໃໝ່", 
+            "auth_required" : true, 
+            "admin_required" : true, 
+            "request_body" : { 
+              "job_id" : "number (required)" , 
+              "user_id" : "number (required)" , 
+              "reason" : "string (optional)"  
+            }, 
+            "response_success" : { 
+              "status" : 201, 
+              "body": { 
+                "success" : true, 
+                "match": "object" , 
+                "message" : "Admin match created successfully"  
+              } 
+            }, 
+            "response_error" : { 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• GET /api/admin/matches  - ດຶງການຈັບຄ ່ທັງໝົດ (Admin)  
+          { 
+            "method" : "GET", 
+            "path": "/api/admin/matches" , 
+            "description" : "ດຶງການຈັບຄ ່ທັງໝົດ", 
+            "auth_required" : true, 
+            "admin_required" : true, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": { 
+                "matches" : "array" 
+              } 
+            }, 
+            "response_error" : { 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• PUT /api/admin/matches/:id  - ແກູ້ໄຂການຈັບຄ ່ (Admin)  
+          { 
+            "method" : "PUT", 
+            "path": "/api/admin/matches/:id" , 
+            "description" : "ແກູ້ໄຂການຈັບຄ ່", 
+            "auth_required" : true, 
+            "admin_required" : true, 
+            "path_params" : { 
+              "id": "number (required)"  
+            }, 
+            "request_body" : { 
+              "job_id" : "number (optional)" , 
+              "user_id" : "number (optional)" , 
+              "reason" : "string (optional)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": "object"  
+            }, 
+            "response_error" : { 
+              "400": "Invalid id parameter" , 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• DELETE /api/admin/matches/:id  - ລຶບການຈັບຄ ່ (Admin)  
+          { 
+            "method" : "DELETE" , 
+            "path": "/api/admin/matches/:id" , 
+            "description" : "ລຶບການຈັບຄ ່", 
+            "auth_required" : true, 
+            "admin_required" : true, 
+            "path_params" : { 
+              "id": "number (required)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": "object"  
+            }, 
+            "response_error" : { 
+              "400": "Invalid id parameter" , 
+              "500": "Internal server error"  
+            } 
+          }, 
+ 
+• PUT /api/admin/job -applications/:id  - ອັບເດດສະຖານະການສະໝັກວຽກ (Admin) 
+          { 
+            "method" : "PUT", 
+            "path": "/api/admin/job -applications/:id" , 
+            "description" : "ອັບເດດສະຖານະການສະໝັກວຽກ", 
+            "auth_required" : true, 
+            "admin_required" : true, 
+            "path_params" : { 
+              "id": "number (required)"  
+            }, 
+            "request_body" : { 
+              "status" : "string (required)"  
+            }, 
+            "response_success" : { 
+              "status" : 200, 
+              "body": "object"  
+            }, 
+            "response_error" : { 
+              "400": "Invalid id parameter" , 
+              "500": "Internal server error"  
+            } 
+          } 
+ 

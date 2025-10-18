@@ -12,9 +12,14 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you'd validate the password. Here we just log in.
-    login(email, "password"); // Simple login, no real auth
-    navigate('/dashboard');
+    (async () => {
+      const result = await login(email, password, true);
+      if (result.success) {
+        navigate('/dashboard');
+      } else {
+        alert(result.message || 'Login failed');
+      }
+    })();
   };
 
   return (

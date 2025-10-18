@@ -58,7 +58,7 @@ interface DataContextType {
   services: Service[];
   requests: ServiceRequest[];
   addService: (service: Omit<Service, 'id'>) => void;
-  addRequest: (request: Omit<ServiceRequest, 'id' | 'comments' | 'reactions' | 'status' | 'applicants' | 'selectedProvider'>) => void;
+  addRequest: (request: Omit<ServiceRequest, 'id' | 'comments' | 'reactions' | 'status' | 'applicants' | 'selectedProvider'>) => ServiceRequest;
   addCommentToRequest: (requestId: number, comment: Omit<Comment, 'id'>) => void;
   addReactionToRequest: (requestId: number, emoji: string) => void;
   applyToRequest: (requestId: number, applicant: UserStub) => void;
@@ -92,7 +92,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setServices(prev => [newService, ...prev]);
   };
 
-  const addRequest = (request: Omit<ServiceRequest, 'id' | 'comments' | 'reactions'| 'status' | 'applicants' | 'selectedProvider'>) => {
+  const addRequest = (request: Omit<ServiceRequest, 'id' | 'comments' | 'reactions'| 'status' | 'applicants' | 'selectedProvider'>): ServiceRequest => {
     const newRequest: ServiceRequest = {
         ...request, 
         id: Date.now(), 
@@ -103,6 +103,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         selectedProvider: null,
     };
     setRequests(prev => [newRequest, ...prev]);
+    return newRequest;
   };
   
   const addCommentToRequest = (requestId: number, comment: Omit<Comment, 'id'>) => {

@@ -137,11 +137,17 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-4">
-          <ActionCard to="/request-help" icon={QuestionMarkCircleIcon} title="ขอความช่วยเหลือ" />
-          <ActionCard to="/create" icon={HeartIcon} title="ฉันอยากช่วยเหลือ" isPrimary />
-          <ActionCard to="/timebank" icon={BanknotesIcon} title="ดูเครดิตของฉัน" />
-          <ActionCard to="/timebank" icon={ArrowsRightLeftIcon} title="โอนเครดิต" />
+      <div className="space-y-4">
+          {/* Request Help - Full width with highlight */}
+          <div>
+              <ActionCard to="/request-help" icon={QuestionMarkCircleIcon} title="ขอความช่วยเหลือ" isPrimary />
+          </div>
+          
+          {/* Credits Actions - Two buttons in same row */}
+          <div className="grid grid-cols-2 gap-4">
+              <ActionCard to="/timebank" icon={BanknotesIcon} title="ดูเครดิตของฉัน" />
+              <ActionCard to="/timebank" icon={ArrowsRightLeftIcon} title="โอนเครดิต" />
+          </div>
       </div>
       
       {/* Latest Status */}

@@ -1,41 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import Card from '../components/Card';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { Service } from '../types';
 import { UsersIcon, BriefcaseIcon, HeartIcon } from '@heroicons/react/24/outline';
 
 
-const latestServices: Service[] = [
-  { 
-    id: 1, 
-    title: 'สอนทำอาหารไทยต้นตำรับสำหรับผู้เริ่มต้น', 
-    category: 'การทำอาหาร', 
-    duration: 2, 
-    unit: 'ชั่วโมง',
-    imageUrl: 'https://images.unsplash.com/photo-1556761223-4c4282c73f77?q=80&w=1974&auto=format&fit=crop',
-    user: { id: 101, name: 'สมใจ รักดี', avatarUrl: 'https://i.pravatar.cc/150?img=1' }
-  },
-  { 
-    id: 2, 
-    title: 'อาสาพาสุนัขเดินเล่นตอนเช้า', 
-    category: 'จิตอาสา', 
-    duration: 1, 
-    unit: 'ชั่วโมง',
-    imageUrl: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=2874&auto=format&fit=crop',
-    user: { id: 102, name: 'มานะ ใจงาม', avatarUrl: 'https://i.pravatar.cc/150?img=2' }
-  },
-  { 
-    id: 3, 
-    title: 'ติวพื้นฐานคณิตศาสตร์ ม.ต้น', 
-    category: 'การศึกษา', 
-    duration: 3, 
-    unit: 'ชั่วโมง',
-    imageUrl: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?q=80&w=2970&auto=format&fit=crop',
-    user: { id: 103, name: 'ปิติ ยินดี', avatarUrl: 'https://i.pravatar.cc/150?img=3' }
-  },
-];
 
 const LandingPage: React.FC = () => {
   return (
@@ -84,42 +53,7 @@ const LandingPage: React.FC = () => {
             </div>
         </section>
 
-        {/* Latest Services Section */}
-        <section className="py-20 bg-background">
-          <div className="container mx-auto px-6">
-            <h2 className="text-3xl font-bold text-center text-primary-text mb-12 font-prompt">กิจกรรม/บริการล่าสุด</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {latestServices.map(service => (
-                <Card key={service.id} {...service} />
-              ))}
-            </div>
-             <div className="text-center mt-12">
-                <Link to="/search" className="bg-accent text-white font-bold py-3 px-8 rounded-full transition-transform hover:scale-105 shadow-md">
-                    ดูทั้งหมด
-                </Link>
-            </div>
-          </div>
-        </section>
 
-         {/* Stats Section */}
-        <section className="py-20 bg-muted">
-            <div className="container mx-auto px-6">
-                <div className="grid md:grid-cols-3 gap-8 text-center">
-                    <div>
-                        <p className="text-5xl font-bold text-primary-text">1,200+</p>
-                        <p className="text-xl mt-2 text-secondary-text">สมาชิก</p>
-                    </div>
-                    <div>
-                        <p className="text-5xl font-bold text-primary-text">800+</p>
-                        <p className="text-xl mt-2 text-secondary-text">กิจกรรม/บริการ</p>
-                    </div>
-                    <div>
-                        <p className="text-5xl font-bold text-primary-text">5,000+</p>
-                        <p className="text-xl mt-2 text-secondary-text">ชั่วโมงที่แลกเปลี่ยน</p>
-                    </div>
-                </div>
-            </div>
-        </section>
 
       </main>
       <Footer />

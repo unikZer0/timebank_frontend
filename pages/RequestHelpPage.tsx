@@ -56,10 +56,10 @@ const RequestHelpPage: React.FC = () => {
         avatarUrl: currentUser.avatarUrl || `https://i.pravatar.cc/150?u=${currentUser.email}`
       }
     };
-    addRequest(requestData);
+    const newRequest = addRequest(requestData);
     
     showToast('Your request has been posted!', 'success');
-    navigate('/dashboard'); 
+    navigate(`/request/${newRequest.id}`); 
   };
   
   const isFormInvalid = !formData.title || !formData.category || !formData.description || !formData.duration;

@@ -1,11 +1,11 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { ChartBarIcon, MagnifyingGlassIcon, PlusCircleIcon, UserCircleIcon, BanknotesIcon } from '@heroicons/react/24/solid';
+import { ChartBarIcon, MagnifyingGlassIcon, QuestionMarkCircleIcon, UserCircleIcon, BanknotesIcon } from '@heroicons/react/24/solid';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
   { name: 'Search', href: '/search', icon: MagnifyingGlassIcon },
-  { name: 'Create', href: '/create', icon: PlusCircleIcon },
+  { name: 'Request Help', href: '/request-help', icon: QuestionMarkCircleIcon },
   { name: 'Timebank', href: '/timebank', icon: BanknotesIcon },
   { name: 'Profile', href: '/profile', icon: UserCircleIcon },
 ];

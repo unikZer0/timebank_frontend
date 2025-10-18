@@ -6,7 +6,6 @@ import {
   Bars3Icon,
   XMarkIcon,
   ChartBarIcon,
-  MagnifyingGlassIcon,
   QuestionMarkCircleIcon,
   BanknotesIcon,
   UserCircleIcon,
@@ -16,7 +15,6 @@ import { useUser } from '../context/UserContext';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
-  { name: 'ค้นหา', href: '/search', icon: MagnifyingGlassIcon },
   { name: 'ขอความช่วยเหลือ', href: '/request-help', icon: QuestionMarkCircleIcon },
   { name: 'เครดิตของฉัน', href: '/timebank', icon: BanknotesIcon },
   { name: 'โปรไฟล์', href: '/profile', icon: UserCircleIcon },

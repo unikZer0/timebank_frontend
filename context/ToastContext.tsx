@@ -51,12 +51,13 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = Date.now();
+    // Generate a unique ID using timestamp + random number + toast count
+    const id = Date.now() + Math.random() * 10000 + toasts.length;
     setToasts(prevToasts => [{ id, message, type }, ...prevToasts]);
     setTimeout(() => {
       removeToast(id);
     }, 5000); // Auto-remove after 5 seconds
-  }, []);
+  }, [toasts.length]);
   
   const removeToast = (id: number) => {
     setToasts(prevToasts => prevToasts.filter(toast => toast.id !== id));

@@ -21,7 +21,6 @@ const Footer: React.FC = () => {
             <h3 className="text-lg font-semibold mb-4 text-primary-text">ลิงก์ด่วน</h3>
             <ul className="space-y-2">
               <li><Link to="/about" className="text-secondary-text hover:text-primary-text">เกี่ยวกับเรา</Link></li>
-              <li><Link to="/search" className="text-secondary-text hover:text-primary-text">กิจกรรมทั้งหมด</Link></li>
               <li><Link to="/contact" className="text-secondary-text hover:text-primary-text">ติดต่อเรา</Link></li>
               <li><a href="#" className="text-secondary-text hover:text-primary-text">นโยบายความเป็นส่วนตัว</a></li>
             </ul>

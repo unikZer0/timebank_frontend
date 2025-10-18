@@ -18,11 +18,11 @@ const LandingPage: React.FC = () => {
             <h1 className="text-4xl md:text-6xl font-bold mb-4 font-prompt text-primary-text">ร่วมสร้างสังคมแห่งการแบ่งปัน</h1>
             <p className="text-lg md:text-xl mb-8 max-w-2xl text-secondary-text">เวลาและทักษะของคุณมีค่า มาแลกเปลี่ยนเพื่อสร้างสรรค์ชุมชนที่เข้มแข็ง</p>
             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <Link to="/search" className="bg-accent hover:bg-accent-hover text-white font-bold py-3 px-8 rounded-full transition-transform hover:scale-105 shadow-lg shadow-accent/20">
-                ค้นหากิจกรรม/บริการ
+              <Link to="/register" className="bg-accent hover:bg-accent-hover text-white font-bold py-3 px-8 rounded-full transition-transform hover:scale-105 shadow-lg shadow-accent/20">
+                เริ่มต้นใช้งาน
               </Link>
-              <Link to="/register" className="bg-surface backdrop-blur-sm text-primary-text border border-border-color font-bold py-3 px-8 rounded-full transition-transform hover:scale-105 hover:bg-muted shadow-lg">
-                สมัครสมาชิก
+              <Link to="/login" className="bg-surface backdrop-blur-sm text-primary-text border border-border-color font-bold py-3 px-8 rounded-full transition-transform hover:scale-105 hover:bg-muted shadow-lg">
+                เข้าสู่ระบบ
               </Link>
             </div>
           </div>

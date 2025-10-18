@@ -6,6 +6,7 @@ import { UserStub } from '../types';
 import { useData } from '../context/DataContext';
 import { useUser } from '../context/UserContext';
 import { useToast } from '../context/ToastContext';
+import { formatTimeRange } from '../utils/timeUtils';
 
 const StatusBadge: React.FC<{ status: 'open' | 'in_progress' | 'completed' }> = ({ status }) => {
     const baseClasses = "text-xs font-bold px-3 py-1 rounded-full inline-block";
@@ -71,9 +72,9 @@ const RequestDetailPage: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto font-prompt">
-      <Link to="/search" className="inline-flex items-center text-secondary-text hover:text-accent mb-6 transition-colors">
+      <Link to="/dashboard" className="inline-flex items-center text-secondary-text hover:text-accent mb-6 transition-colors">
         <ArrowLeftIcon className="w-5 h-5 mr-2" />
-        Back to Search
+        Back to Dashboard
       </Link>
       
       <div className="bg-surface p-6 sm:p-8 rounded-2xl shadow-md border border-border-color">
@@ -81,8 +82,7 @@ const RequestDetailPage: React.FC = () => {
             <div className="flex items-start space-x-4 mb-4">
                 <img src={request.user.avatarUrl} alt={request.user.name} className="w-14 h-14 rounded-full object-cover flex-shrink-0" />
                 <div>
-                    <span className="bg-accent text-white text-xs font-bold px-3 py-1 rounded-full">{request.category}</span>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-primary-text mt-2">{request.title}</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-primary-text">{request.title}</h1>
                     <p className="text-secondary-text">Posted by {request.user.name}</p>
                 </div>
             </div>
@@ -93,6 +93,19 @@ const RequestDetailPage: React.FC = () => {
             <div className="flex items-center"><ClockIcon className="w-5 h-5 mr-1.5" /> {request.duration} {request.unit}</div>
             <div className="flex items-center"><UserGroupIcon className="w-5 h-5 mr-1.5" /> {request.applicants.length} applicant(s)</div>
         </div>
+
+        {/* Time Range Display */}
+        {request.start_time || request.end_time ? (
+          <div className="bg-accent-light p-4 rounded-lg border border-accent/20 mb-6">
+            <div className="flex items-center text-accent font-medium">
+              <ClockIcon className="w-5 h-5 mr-2" />
+              <span>เวลาที่กำหนด:</span>
+            </div>
+            <p className="text-primary-text font-semibold mt-1">
+              {formatTimeRange(request.start_time, request.end_time)}
+            </p>
+          </div>
+        ) : null}
 
         <p className="text-primary-text text-base leading-relaxed my-6">{request.description}</p>
         
@@ -218,8 +231,8 @@ const RequestDetailPage: React.FC = () => {
             <div className="bg-gradient-to-r from-accent to-yellow-500 rounded-xl p-6 text-center text-white">
                 <h3 className="text-xl font-bold mb-2"> Discover More Opportunities</h3>
                 <p className="text-sm mb-4 opacity-90">Find more ways to help your community and earn credits</p>
-                <Link to="/search" className="inline-block bg-white text-accent font-bold px-6 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                    Explore All Requests
+                <Link to="/request-help" className="inline-block bg-white text-accent font-bold px-6 py-2 rounded-lg hover:bg-gray-100 transition-colors">
+                    Request Help
                 </Link>
             </div>
         </div>

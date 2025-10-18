@@ -11,9 +11,11 @@ import {
     ArrowsRightLeftIcon,
     ClockIcon,
     CheckCircleIcon,
-    UserCircleIcon
+    UserCircleIcon,
+    BriefcaseIcon
 } from '@heroicons/react/24/solid';
 import DashboardPageSkeleton from '../components/DashboardPageSkeleton';
+import { formatTimeRange } from '../utils/timeUtils';
 
 const ActionCard: React.FC<{ to: string; icon: React.ElementType; title: string; isPrimary?: boolean }> = ({ to, icon: Icon, title, isPrimary }) => (
     <Link
@@ -46,6 +48,8 @@ const StatusItem: React.FC<{ request: ServiceRequest }> = ({ request }) => {
         userText = `by ${request.user.name}`;
     }
 
+    const timeRange = formatTimeRange(request.start_time, request.end_time);
+
     return (
         <Link to={`/request/${request.id}`} className="block p-4 bg-surface border border-border-color rounded-xl transition-colors duration-200 hover:border-accent/50">
             <p className="font-semibold text-primary-text">{request.title}</p>
@@ -53,12 +57,17 @@ const StatusItem: React.FC<{ request: ServiceRequest }> = ({ request }) => {
                 {statusIcon}
                 <p>{statusText} {userText}</p>
             </div>
+            {timeRange && (
+                <div className="mt-2 text-xs text-accent font-medium">
+                    📅 {timeRange}
+                </div>
+            )}
         </Link>
     );
 };
 
 const DashboardPage: React.FC = () => {
-  const { currentUser } = useUser();
+  const { currentUser, walletBalance, isLoadingBalance } = useUser();
   const { requests } = useData();
 
 
@@ -87,7 +96,13 @@ const DashboardPage: React.FC = () => {
       {/* Credit Info */}
       <div className="bg-surface border border-border-color rounded-2xl p-6 text-center shadow-sm">
           <p className="text-secondary-text font-medium">เครดิตคงเหลือ</p>
-          <p className="text-5xl font-bold text-accent my-2">{currentUser.timeCredit}</p>
+          {isLoadingBalance ? (
+            <div className="flex items-center justify-center my-2">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
+            </div>
+          ) : (
+            <p className="text-5xl font-bold text-accent my-2">{walletBalance !== null ? walletBalance : currentUser.timeCredit}</p>
+          )}
           <p className="text-sm font-semibold text-secondary-text bg-accent-light px-3 py-1 rounded-full inline-block">1 เครดิต = 1 ชั่วโมง</p>
       </div>
       
@@ -98,10 +113,11 @@ const DashboardPage: React.FC = () => {
               <ActionCard to="/request-help" icon={QuestionMarkCircleIcon} title="ขอความช่วยเหลือ" isPrimary />
           </div>
           
-          {/* Credits Actions - Two buttons in same row */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Credits Actions - Three buttons in same row */}
+          <div className="grid grid-cols-3 gap-4">
               <ActionCard to="/timebank" icon={BanknotesIcon} title="ดูเครดิตของฉัน" />
-              <ActionCard to="/timebank" icon={ArrowsRightLeftIcon} title="โอนเครดิต" />
+              <ActionCard to="/timebank/transfer" icon={ArrowsRightLeftIcon} title="โอนเครดิต" />
+              <ActionCard to="/my-jobs" icon={BriefcaseIcon} title="งานของฉัน" />
           </div>
       </div>
       
@@ -138,7 +154,7 @@ const DashboardPage: React.FC = () => {
             {(pendingMyRequests.length === 0 && pendingHelpingJobs.length === 0) && (
                 <div className="text-center py-6 text-secondary-text">
                     <p>No active tasks right now.</p>
-                    <p className="text-sm">Why not <Link to="/search" className="text-accent underline">find someone to help</Link>?</p>
+                    <p className="text-sm">Why not <Link to="/request-help" className="text-accent underline">request some help</Link>?</p>
                 </div>
             )}
         </div>

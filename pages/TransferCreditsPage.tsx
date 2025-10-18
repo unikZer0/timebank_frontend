@@ -1,50 +1,91 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import FormField from '../components/FormField';
 import { useUser } from '../context/UserContext';
 import { useToast } from '../context/ToastContext';
 import { ArrowLeftIcon, MagnifyingGlassIcon, UserCircleIcon } from '@heroicons/react/24/solid';
-import { User } from '../types';
+import { FamilyMember } from '../types';
+import { transferCredits, getFamilyMembers, searchUserByIdCard } from '../services/apiService';
 
 const TransferCreditsPage: React.FC = () => {
-    const { currentUser, users, findUserByIdCard, transferCredits } = useUser();
+    const { currentUser, walletBalance, isLoadingBalance } = useUser();
     const { showToast } = useToast();
     const navigate = useNavigate();
 
     const [idCardSearch, setIdCardSearch] = useState('');
-    const [searchedUser, setSearchedUser] = useState<User | null | undefined>(undefined); // undefined for initial, null for not found
+    const [searchedUsers, setSearchedUsers] = useState<FamilyMember[]>([]);
+    const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
+    const [isLoadingFamily, setIsLoadingFamily] = useState(true);
+    const [isSearching, setIsSearching] = useState(false);
     
-    const [recipient, setRecipient] = useState<User | null>(null);
+    const [recipient, setRecipient] = useState<FamilyMember | null>(null);
     const [amount, setAmount] = useState('');
     const [error, setError] = useState('');
+    const [isTransferring, setIsTransferring] = useState(false);
+
+    // Fetch family members on component mount
+    useEffect(() => {
+        const fetchFamilyMembers = async () => {
+            try {
+                setIsLoadingFamily(true);
+                const response = await getFamilyMembers();
+                
+                if (response.success) {
+                    setFamilyMembers(response.familyMembers || []);
+                } else {
+                    console.error('Failed to load family members:', response.message);
+                    setFamilyMembers([]);
+                }
+            } catch (error: any) {
+                console.error('Error fetching family members:', error);
+                setFamilyMembers([]);
+            } finally {
+                setIsLoadingFamily(false);
+            }
+        };
+
+        if (currentUser) {
+            fetchFamilyMembers();
+        }
+    }, [currentUser]);
 
     if (!currentUser) {
         return <div>Loading...</div>;
     }
 
-    const familyMembers = users.filter(user => currentUser.family.includes(user.id));
-
-    const handleSearch = (e: React.FormEvent) => {
+    const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        if (idCardSearch.length !== 13 || !/^\d+$/.test(idCardSearch)) {
-            setError('Please enter a valid 13-digit ID Card Number.');
-            setSearchedUser(null);
+        
+        if (!idCardSearch.trim()) {
+            setError('Please enter a search term.');
+            setSearchedUsers([]);
             return;
         }
-        if (idCardSearch === currentUser.idCardNumber) {
-            setError("You cannot transfer credits to yourself.");
-            setSearchedUser(null);
-            return;
+        
+        try {
+            setIsSearching(true);
+            const response = await searchUserByIdCard(idCardSearch.trim());
+            
+            if (response.success && response.users) {
+                setSearchedUsers(response.users);
+            } else {
+                setSearchedUsers([]);
+                setError(response.message || 'No users found.');
+            }
+        } catch (error: any) {
+            console.error('Error searching users:', error);
+            setSearchedUsers([]);
+            setError('Failed to search users.');
+        } finally {
+            setIsSearching(false);
         }
-        const foundUser = findUserByIdCard(idCardSearch);
-        setSearchedUser(foundUser || null);
     };
 
-    const selectRecipient = (user: User) => {
+    const selectRecipient = (user: FamilyMember) => {
         setRecipient(user);
-        setSearchedUser(undefined);
+        setSearchedUsers([]);
         setIdCardSearch('');
         setError('');
     };
@@ -54,7 +95,7 @@ const TransferCreditsPage: React.FC = () => {
         setAmount('');
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!recipient) return;
         
@@ -64,18 +105,28 @@ const TransferCreditsPage: React.FC = () => {
             showToast('Please enter a valid amount.', 'error');
             return;
         }
-        if (transferAmount > currentUser.timeCredit) {
+        
+        const currentBalance = walletBalance !== null ? walletBalance : currentUser.timeCredit;
+        if (transferAmount > currentBalance) {
             showToast("You don't have enough credits for this transfer.", 'error');
             return;
         }
         
-        const result = transferCredits(recipient.id, transferAmount);
-        
-        if (result.success) {
-            showToast(`Successfully transferred ${amount} credits to ${recipient.name}!`, 'success');
-            navigate('/timebank');
-        } else {
-            showToast(result.message, 'error');
+        try {
+            setIsTransferring(true);
+            const response = await transferCredits(recipient.id, transferAmount);
+            
+            if (response.success) {
+                showToast(`Successfully transferred ${amount} credits to ${recipient.first_name} ${recipient.last_name}!`, 'success');
+                navigate('/timebank');
+            } else {
+                showToast(response.message || 'Transfer failed', 'error');
+            }
+        } catch (error: any) {
+            console.error('Error transferring credits:', error);
+            showToast('Transfer failed. Please try again.', 'error');
+        } finally {
+            setIsTransferring(false);
         }
     };
 
@@ -91,7 +142,13 @@ const TransferCreditsPage: React.FC = () => {
             <div className="bg-surface p-6 sm:p-8 rounded-xl shadow-md border border-border-color space-y-8">
                 <div className="text-center bg-accent-light p-4 rounded-lg">
                     <p className="text-secondary-text font-medium">Your available balance</p>
-                    <p className="text-3xl font-bold text-accent">{currentUser.timeCredit} Credits</p>
+                    {isLoadingBalance ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+                      </div>
+                    ) : (
+                      <p className="text-3xl font-bold text-accent">{walletBalance !== null ? walletBalance : currentUser.timeCredit} Credits</p>
+                    )}
                 </div>
 
                 {!recipient ? (
@@ -100,11 +157,20 @@ const TransferCreditsPage: React.FC = () => {
                         <div>
                             <h2 className="text-xl font-semibold mb-3">Family Members</h2>
                             <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                                {familyMembers.length > 0 ? familyMembers.map(member => (
+                                {isLoadingFamily ? (
+                                    <div className="text-center py-4">
+                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent mx-auto"></div>
+                                        <p className="text-secondary-text text-sm mt-2">Loading family members...</p>
+                                    </div>
+                                ) : familyMembers.length > 0 ? familyMembers.map(member => (
                                     <div key={member.id} className="flex items-center justify-between p-3 bg-background rounded-lg">
                                         <div className="flex items-center space-x-3">
-                                            <img src={member.avatarUrl} alt={member.name} className="w-10 h-10 rounded-full" />
-                                            <span className="font-semibold text-primary-text">{member.name}</span>
+                                            <img 
+                                                src={member.avatar_url || `https://i.pravatar.cc/150?u=${member.email}`} 
+                                                alt={`${member.first_name} ${member.last_name}`} 
+                                                className="w-10 h-10 rounded-full" 
+                                            />
+                                            <span className="font-semibold text-primary-text">{member.first_name} {member.last_name}</span>
                                         </div>
                                         <button onClick={() => selectRecipient(member)} className="px-3 py-1 bg-accent text-white font-bold text-sm rounded-md hover:bg-accent-hover">Select</button>
                                     </div>
@@ -114,31 +180,57 @@ const TransferCreditsPage: React.FC = () => {
 
                         {/* Search */}
                         <div>
-                           <h2 className="text-xl font-semibold mb-3">Find by ID Card Number</h2>
+                           <h2 className="text-xl font-semibold mb-3">Find by Name or ID Card</h2>
                            <form onSubmit={handleSearch} className="flex items-start space-x-2">
                                 <div className="flex-grow">
                                     <input 
                                         type="text"
-                                        placeholder="13-digit ID Card Number"
+                                        placeholder="Search by name or 13-digit ID Card Number"
                                         value={idCardSearch}
                                         onChange={(e) => setIdCardSearch(e.target.value)}
-                                        maxLength={13}
                                         className="w-full px-4 py-3 bg-background border border-border-color rounded-lg text-primary-text placeholder-secondary-text focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
                                     />
                                      {error && <p className="text-red-500 text-sm mt-1.5">{error}</p>}
                                 </div>
-                                <button type="submit" className="p-3 bg-accent text-white rounded-lg hover:bg-accent-hover"><MagnifyingGlassIcon className="w-6 h-6"/></button>
+                                <button 
+                                    type="submit" 
+                                    disabled={isSearching}
+                                    className="p-3 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                >
+                                    {isSearching ? (
+                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                                    ) : (
+                                        <MagnifyingGlassIcon className="w-6 h-6"/>
+                                    )}
+                                </button>
                            </form>
-                           {searchedUser && (
-                                <div className="mt-4 p-3 bg-background rounded-lg flex items-center justify-between animate-subtle-enter">
-                                    <div className="flex items-center space-x-3">
-                                        <img src={searchedUser.avatarUrl} alt={searchedUser.name} className="w-10 h-10 rounded-full" />
-                                        <span className="font-semibold text-primary-text">{searchedUser.name}</span>
-                                    </div>
-                                    <button onClick={() => selectRecipient(searchedUser)} className="px-3 py-1 bg-accent text-white font-bold text-sm rounded-md hover:bg-accent-hover">Select</button>
+                           
+                           {/* Search Results */}
+                           {searchedUsers.length > 0 && (
+                                <div className="mt-4 space-y-2 max-h-60 overflow-y-auto">
+                                    {searchedUsers.map(user => (
+                                        <div key={user.id} className="p-3 bg-background rounded-lg flex items-center justify-between animate-subtle-enter">
+                                            <div className="flex items-center space-x-3">
+                                                <img 
+                                                    src={user.avatar_url || `https://i.pravatar.cc/150?u=${user.email}`} 
+                                                    alt={`${user.first_name} ${user.last_name}`} 
+                                                    className="w-10 h-10 rounded-full" 
+                                                />
+                                                <div>
+                                                    <span className="font-semibold text-primary-text">{user.first_name} {user.last_name}</span>
+                                                    <p className="text-xs text-secondary-text">ID: {user.national_id}</p>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={() => selectRecipient(user)} 
+                                                className="px-3 py-1 bg-accent text-white font-bold text-sm rounded-md hover:bg-accent-hover"
+                                            >
+                                                Select
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
                            )}
-                           {searchedUser === null && <p className="text-secondary-text text-sm mt-2 p-3 bg-background rounded-lg">User not found.</p>}
                         </div>
                     </div>
                 ) : (
@@ -148,8 +240,12 @@ const TransferCreditsPage: React.FC = () => {
                             <div>
                                 <p className="text-sm text-secondary-text">Recipient:</p>
                                 <div className="flex items-center space-x-3 mt-1">
-                                    <img src={recipient.avatarUrl} alt={recipient.name} className="w-10 h-10 rounded-full" />
-                                    <span className="font-bold text-lg text-primary-text">{recipient.name}</span>
+                                    <img 
+                                        src={recipient.avatar_url || `https://i.pravatar.cc/150?u=${recipient.email}`} 
+                                        alt={`${recipient.first_name} ${recipient.last_name}`} 
+                                        className="w-10 h-10 rounded-full" 
+                                    />
+                                    <span className="font-bold text-lg text-primary-text">{recipient.first_name} {recipient.last_name}</span>
                                 </div>
                             </div>
                             <button onClick={clearRecipient} className="text-sm font-semibold text-accent hover:underline">Change</button>
@@ -167,9 +263,17 @@ const TransferCreditsPage: React.FC = () => {
                             <div className="pt-2">
                                 <button
                                     type="submit"
+                                    disabled={isTransferring}
                                     className="w-full py-3 bg-accent text-white font-bold text-lg rounded-md hover:bg-accent-hover transition-all duration-300 disabled:bg-gray-300 disabled:cursor-not-allowed transform active:scale-95 shadow-lg shadow-accent/20"
                                 >
-                                    Confirm & Transfer {amount && `${amount} Credits`}
+                                    {isTransferring ? (
+                                        <div className="flex items-center justify-center">
+                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                                            Transferring...
+                                        </div>
+                                    ) : (
+                                        `Confirm & Transfer ${amount && `${amount} Credits`}`
+                                    )}
                                 </button>
                             </div>
                          </form>

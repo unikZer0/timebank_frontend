@@ -1,10 +1,12 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PencilIcon, ShareIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/solid';
 import { User } from '../types';
 import { useUser } from '../context/UserContext';
+import { getUserProfile } from '../services/apiService';
 import ProfilePageSkeleton from '../components/ProfilePageSkeleton';
+import { useToast } from '../context/ToastContext';
 
 const StatCircle: React.FC<{ value: number, label: string, colorClass: string }> = ({ value, label, colorClass }) => (
     <div className="flex flex-col items-center text-center">
@@ -27,9 +29,10 @@ const RenderAvatar: React.FC<{ user: User }> = ({ user }) => {
   if (user.avatarUrl) {
     return <img src={user.avatarUrl} alt="avatar" className="w-32 h-32 rounded-full object-cover ring-4 ring-surface shadow-lg" />;
   } else {
-    const initial = user.firstName.charAt(0);
+    // Get first character of first name, fallback to email if no first name
+    const initial = user.firstName ? user.firstName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase();
     return (
-      <div className="w-32 h-32 rounded-full bg-muted text-accent flex items-center justify-center text-5xl font-bold ring-4 ring-surface shadow-lg">
+      <div className="w-32 h-32 rounded-full bg-gradient-to-br from-accent to-accent-hover text-white flex items-center justify-center text-5xl font-bold ring-4 ring-surface shadow-lg">
         {initial}
       </div>
     );
@@ -38,13 +41,44 @@ const RenderAvatar: React.FC<{ user: User }> = ({ user }) => {
 
 const ProfilePage: React.FC = () => {
   const { currentUser, logout } = useUser();
+  const { showToast } = useToast();
   const navigate = useNavigate();
+  const [profileData, setProfileData] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (!currentUser) {
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!currentUser) return;
+      
+      try {
+        setIsLoading(true);
+        const response = await getUserProfile();
+        
+        if (response.success && response.data) {
+          setProfileData(response.data);
+        } else {
+          showToast('Failed to load profile data', 'error');
+          // Fallback to current user data
+          setProfileData(currentUser);
+        }
+      } catch (error: any) {
+        console.error('Error fetching profile:', error);
+        showToast('Failed to load profile data', 'error');
+        // Fallback to current user data
+        setProfileData(currentUser);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [currentUser, showToast]);
+
+  if (!currentUser || isLoading) {
     return <ProfilePageSkeleton />;
   }
   
-  const user = currentUser;
+  const user = profileData || currentUser;
 
   const handleLogout = () => {
     logout();

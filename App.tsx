@@ -10,13 +10,14 @@ import SkillsPage from './pages/SkillsPage';
 import VerificationPage from './pages/VerificationPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage from './pages/DashboardPage';
-import SearchPage from './pages/SearchPage';
 import CreateServicePage from './pages/CreateServicePage';
 import ProfilePage from './pages/ProfilePage';
+import MyJobsPage from './pages/MyJobsPage';
 import TimeBankPage from './pages/TimeBankPage';
 import AchievementsPage from './pages/AchievementsPage';
 import RequestHelpPage from './pages/RequestHelpPage';
 import RequestDetailPage from './pages/RequestDetailPage';
+import JobsPage from './pages/JobsPage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
 import PublicServicesPage from './pages/PublicServicesPage';
@@ -86,7 +87,8 @@ const App: React.FC = () => {
                 {/* Authenticated Routes */}
                 <Route element={<AuthenticatedLayout />}>
                   <Route path="/dashboard" element={<DashboardPage />} />
-                  <Route path="/search" element={<SearchPage />} />
+                  <Route path="/jobs" element={<JobsPage />} />
+                  <Route path="/my-jobs" element={<MyJobsPage />} />
                   <Route path="/create" element={<RequestHelpPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   <Route path="/timebank" element={<TimeBankPage />} />

@@ -55,6 +55,8 @@ export interface ServiceRequest {
     reactions: Reactions;
     duration: number;
     unit: string;
+    start_time: string; // Required - HH:MM format
+    end_time: string; // Required - HH:MM format
     status: 'open' | 'in_progress' | 'completed';
     applicants: UserStub[];
     selectedProvider: UserStub | null;
@@ -67,12 +69,36 @@ export interface Achievement {
   icon: React.ElementType;
 }
 
+export interface FamilyMember {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    id_card_number: string;
+    avatar_url?: string;
+}
+
+export interface TransferHistory {
+    id: number;
+    from_user_id: number;
+    to_user_id: number;
+    amount: number;
+    created_at: string;
+    from_first_name: string;
+    from_last_name: string;
+    to_first_name: string;
+    to_last_name: string;
+}
+
 export interface Transaction {
     id: number;
-    type: 'deposit' | 'withdrawal' | 'transfer-in' | 'transfer-out';
-    description: string;
+    from_user_id: number | null;
+    to_user_id: number | null;
     amount: number;
-    date: string; // ISO string format
-    from?: string; // name
-    to?: string; // name
+    type: 'transfer' | 'job_completion';
+    created_at: string; // ISO string format
+    from_first_name?: string;
+    from_last_name?: string;
+    to_first_name?: string;
+    to_last_name?: string;
 }

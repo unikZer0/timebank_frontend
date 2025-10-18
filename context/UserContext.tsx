@@ -3,12 +3,14 @@ import React, { createContext, useState, useContext, ReactNode, useEffect } from
 import { User, UserStats } from '../types';
 import { allAchievements } from '../pages/AchievementsPage';
 import { useNotification } from './NotificationContext';
-import { apiLogin } from '../services/apiService';
+import { apiLogin, getWalletBalance } from '../services/apiService';
 import { useToast } from './ToastContext';
 
 interface UserContextType {
   currentUser: User | null;
   users: User[];
+  walletBalance: number | null;
+  isLoadingBalance: boolean;
   login: (identifier: string, password: string, remember?: boolean) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   register: (userData: Omit<User, 'id' | 'timeCredit' | 'stats' | 'achievements' | 'name' | 'family'> & { idCardNumber: string }) => void;
@@ -16,6 +18,7 @@ interface UserContextType {
   processJobPayment: (requesterId: number, providerId: number, amount: number, jobTitle: string) => void;
   findUserByIdCard: (idCard: string) => User | undefined;
   transferCredits: (recipientId: number, amount: number) => { success: boolean, message: string };
+  refreshWalletBalance: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -30,6 +33,8 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const savedUser = localStorage.getItem('timebank-currentUser');
     return savedUser ? JSON.parse(savedUser) : null;
   });
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const { showTrophy } = useNotification();
   const { showToast } = useToast();
 
@@ -242,8 +247,49 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return { success: true, message: "Transfer successful!" };
   };
 
+  const refreshWalletBalance = async () => {
+    if (!currentUser) return;
+    
+    setIsLoadingBalance(true);
+    try {
+      const response = await getWalletBalance();
+      console.log('Wallet balance API response:', response);
+      // The API returns { success: true, data: { user_id: 346, hours: "5.00" } }
+      setWalletBalance(parseFloat(response.data?.hours || 0));
+    } catch (error) {
+      console.error('Error fetching wallet balance:', error);
+      showToast('ไม่สามารถโหลดยอดเครดิตได้', 'error');
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  };
+
+  // Auto-refresh wallet balance when user logs in
+  useEffect(() => {
+    if (currentUser && typeof refreshWalletBalance === 'function') {
+      refreshWalletBalance();
+    } else {
+      setWalletBalance(null);
+    }
+  }, [currentUser]);
+
+  const contextValue = {
+    currentUser, 
+    users, 
+    walletBalance, 
+    isLoadingBalance, 
+    login, 
+    logout, 
+    register, 
+    updateUserStats, 
+    processJobPayment, 
+    findUserByIdCard, 
+    transferCredits, 
+    refreshWalletBalance 
+  };
+
   return (
-    <UserContext.Provider value={{ currentUser, users, login, logout, register, updateUserStats, processJobPayment, findUserByIdCard, transferCredits }}>
+    <UserContext.Provider value={contextValue}>
       {children}
     </UserContext.Provider>
   );

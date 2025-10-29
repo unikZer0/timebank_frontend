@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FormField from '../components/FormField';
 import FormTextArea from '../components/FormTextArea';
+import NationalIdValidation from '../components/NationalIdValidation';
 
 const PersonalDataPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -9,20 +10,42 @@ const PersonalDataPage: React.FC = () => {
     lastName: '',
     email: '',
     phone: '',
-    address: '',
+    idCardNumber: '',
+    dob: '',
     password: '',
     confirmPassword: '',
   });
+  
+  const [nationalIdValidation, setNationalIdValidation] = useState({
+    isValid: false,
+    data: null
+  });
+  
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Filter phone number input to only allow digits and limit to 10 characters
+    if (name === 'phone') {
+      const filteredValue = value.replace(/\D/g, '').slice(0, 10);
+      setFormData(prev => ({ ...prev, [name]: filteredValue }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleNationalIdChange = (value: string) => {
+    setFormData(prev => ({ ...prev, idCardNumber: value }));
+  };
+
+  const handleNationalIdValidation = (isValid: boolean, data?: any) => {
+    setNationalIdValidation({ isValid, data });
   };
 
   const handleNext = () => {
     // Basic validation
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.idCardNumber || !formData.dob) {
       alert('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
       return;
     }
@@ -32,8 +55,36 @@ const PersonalDataPage: React.FC = () => {
       return;
     }
 
-    // Store form data in sessionStorage for multi-step process
-    sessionStorage.setItem('registrationData', JSON.stringify(formData));
+    // Enhanced National ID validation using real-time validation result
+    if (!nationalIdValidation.isValid) {
+      alert('กรุณากรอกเลขบัตรประชาชนที่ถูกต้อง');
+      return;
+    }
+
+    // Check for duplicate National ID
+    if (nationalIdValidation.data?.duplicateCheck?.exists) {
+      alert('เลขบัตรประชาชนนี้มีอยู่ในระบบแล้ว กรุณาตรวจสอบอีกครั้ง');
+      return;
+    }
+
+    // Check criminal record
+    if (nationalIdValidation.data?.externalVerification?.details?.criminalRecord?.criminal_record) {
+      alert('ไม่สามารถลงทะเบียนได้เนื่องจากมีประวัติอาชญากรรม');
+      return;
+    }
+
+    // Validate Phone Number (10 digits)
+    if (formData.phone && (formData.phone.length !== 10 || !/^\d+$/.test(formData.phone))) {
+      alert('เบอร์โทรศัพท์ต้องเป็นตัวเลข 10 หลัก');
+      return;
+    }
+
+    // Store form data with validation results in sessionStorage for multi-step process
+    const registrationData = {
+      ...formData,
+      nationalIdValidation: nationalIdValidation.data
+    };
+    sessionStorage.setItem('registrationData', JSON.stringify(registrationData));
     navigate('/register/skills');
   };
 
@@ -122,11 +173,40 @@ const PersonalDataPage: React.FC = () => {
             <FormField
               label="เบอร์โทรศัพท์"
               name="phone"
+              type="tel"
               value={formData.phone}
               onChange={handleChange}
               placeholder="0812345678"
+              maxLength={10}
             />
             
+            <div>
+              <label className="block text-sm font-medium text-primary-text mb-2">
+                เลขบัตรประชาชน (13 หลัก) <span className="text-red-500">*</span>
+              </label>
+              <NationalIdValidation
+                value={formData.idCardNumber}
+                onChange={handleNationalIdChange}
+                onValidationChange={handleNationalIdValidation}
+                birthDate={formData.dob}
+                checkDuplicates={true}
+                verifyExternal={true}
+                showFormatted={true}
+                showExtractedInfo={false}
+                className="w-full"
+                placeholder="1234567890123"
+                required={true}
+              />
+            </div>
+            
+            <FormField
+              label="วันเกิด *"
+              name="dob"
+              type="date"
+              value={formData.dob}
+              onChange={handleChange}
+              required
+            />
             
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -162,7 +242,12 @@ const PersonalDataPage: React.FC = () => {
             </button>
             <button
               onClick={handleNext}
-              className="px-8 py-3 bg-accent text-white font-semibold rounded-lg hover:bg-accent-hover transition-all duration-200"
+              disabled={!nationalIdValidation.isValid}
+              className={`px-8 py-3 font-semibold rounded-lg transition-all duration-200 ${
+                nationalIdValidation.isValid 
+                  ? 'bg-accent text-white hover:bg-accent-hover' 
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
             >
               ต่อไป
             </button>

@@ -1,9 +1,8 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { User, UserStats } from '../types';
 import { allAchievements } from '../pages/AchievementsPage';
 import { useNotification } from './NotificationContext';
-import { apiLogin, getWalletBalance } from '../services/apiService';
+import { apiLogin, getWalletBalance, apiRegister } from '../services/apiService';
 import { useToast } from './ToastContext';
 
 interface UserContextType {
@@ -11,9 +10,9 @@ interface UserContextType {
   users: User[];
   walletBalance: number | null;
   isLoadingBalance: boolean;
-  login: (identifier: string, password: string, remember?: boolean) => Promise<{ success: boolean; message?: string }>;
+  login: (identifier: string, password: string, remember?: boolean, lat?: number, lon?: number) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
-  register: (userData: Omit<User, 'id' | 'timeCredit' | 'stats' | 'achievements' | 'name' | 'family'> & { idCardNumber: string }) => void;
+  register: (userData: Omit<User, 'id' | 'timeCredit' | 'stats' | 'achievements' | 'name' | 'family'> & { idCardNumber: string; dob: string; password: string; phone?: string }) => Promise<void>;
   updateUserStats: (statsUpdate: Partial<UserStats>) => void;
   processJobPayment: (requesterId: number, providerId: number, amount: number, jobTitle: string) => void;
   findUserByIdCard: (idCard: string) => User | undefined;
@@ -80,14 +79,25 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
-  const login = async (identifier: string, password: string, remember: boolean = false) => {
+  const login = async (identifier: string, password: string, remember: boolean = false, lat?: number, lon?: number) => {
     try {
-      const location = await getCurrentLocation();
-
       const payload: any = { identifier, password, remember };
-      if (location) {
-        payload.currentLat = location.lat;
-        payload.currentLon = location.lon;
+      
+      // Use provided coordinates if available, otherwise try to get current location
+      if (lat !== undefined && lon !== undefined) {
+        payload.currentLat = lat;
+        payload.currentLon = lon;
+      } else {
+        try {
+          const location = await getCurrentLocation();
+          if (location) {
+            payload.currentLat = location.lat;
+            payload.currentLon = location.lon;
+          }
+        } catch (locationError) {
+          // Continue without location if geolocation fails
+          console.warn('Could not get location for login:', locationError);
+        }
       }
 
       const data = await apiLogin(payload);
@@ -110,7 +120,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           lastName: apiUser.lastName || '',
           email: apiUser.email || identifier,
           idCardNumber: apiUser.idCardNumber || '',
-          bio: apiUser.bio || '',
           skills: apiUser.skills || [],
           timeCredit: typeof apiUser.timeCredit === 'number' ? apiUser.timeCredit : 0,
           stats: apiUser.stats || { hoursGiven: 0, hoursReceived: 0, peopleHelped: 0, servicesCreated: 0 },
@@ -148,18 +157,60 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setCurrentUser(null);
   };
 
-  const register = (userData: Omit<User, 'id' | 'timeCredit' | 'stats' | 'achievements' | 'name' | 'family'> & { idCardNumber: string }) => {
-    const newUser: User = {
-      ...userData,
-      id: Date.now(),
-      name: `${userData.firstName} ${userData.lastName}`,
-      timeCredit: 5,
-      stats: { hoursGiven: 0, hoursReceived: 0, peopleHelped: 0, servicesCreated: 0 },
-      achievements: [],
-      family: [],
-    };
-    setUsers(prev => [...prev, newUser]);
-    setCurrentUser(newUser);
+  const register = async (userData: Omit<User, 'id' | 'timeCredit' | 'stats' | 'achievements' | 'name' | 'family'> & { idCardNumber: string; dob: string; password: string; phone?: string }) => {
+    try {
+      // Get user's current location
+      let lat = 0, lon = 0;
+      try {
+        const location = await getCurrentLocation();
+        if (location) {
+          lat = location.lat;
+          lon = location.lon;
+        }
+      } catch (locationError) {
+        console.warn('Could not get location for registration:', locationError);
+        // Continue with default coordinates
+      }
+
+      // Call the backend API
+      const response = await apiRegister({
+        first_name: userData.firstName,
+        last_name: userData.lastName,
+        email: userData.email,
+        national_id: userData.idCardNumber,
+        dob: userData.dob,
+        password: userData.password,
+        phone: userData.phone || '',
+        lat: lat,
+        lon: lon,
+        skills: userData.skills || [],
+        embedding: null
+      });
+
+      if (response.success) {
+        // Store token and user data
+        localStorage.setItem('token', response.token);
+        
+        // Create user object for frontend
+        const newUser: User = {
+          ...userData,
+          id: response.user.id,
+          name: `${userData.firstName} ${userData.lastName}`,
+          timeCredit: 0, // Will be updated from backend
+          stats: { hoursGiven: 0, hoursReceived: 0, peopleHelped: 0, servicesCreated: 0 },
+          achievements: [],
+          family: [],
+        };
+        
+        setCurrentUser(newUser);
+        showToast('Registration successful! Please wait for admin verification.', 'success');
+      } else {
+        showToast(response.message || 'Registration failed', 'error');
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      showToast(error.message || 'Registration failed', 'error');
+    }
   };
 
   const updateUserStats = (statsUpdate: Partial<UserStats>) => {

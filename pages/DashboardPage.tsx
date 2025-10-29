@@ -1,9 +1,48 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useData } from '../context/DataContext';
 import { ServiceRequest } from '../types';
+import { getMyJobApplications } from '../services/apiService';
+
+interface JobApplication {
+  id: number;
+  job_id: number;
+  user_id: number;
+  status: string;
+  applied_at: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  skills: string[];
+  lat: number | null;
+  lon: number | null;
+  current_lat: number | null;
+  current_lon: number | null;
+}
+
+interface Job {
+  id: number;
+  title: string;
+  description: string;
+  required_skills: string[];
+  location_lat: number | null;
+  location_lon: number | null;
+  time_balance_hours: number;
+  start_time: string | null;
+  end_time: string | null;
+  broadcasted: boolean;
+  created_at: string;
+  creator_first_name: string;
+  creator_last_name: string;
+  creator_email: string;
+  creator_phone: string | null;
+}
+
+interface JobWithDetails extends Job {
+  application: JobApplication;
+}
 import { 
     QuestionMarkCircleIcon, 
     HeartIcon, 
@@ -12,7 +51,8 @@ import {
     ClockIcon,
     CheckCircleIcon,
     UserCircleIcon,
-    BriefcaseIcon
+    BriefcaseIcon,
+    ExclamationTriangleIcon
 } from '@heroicons/react/24/solid';
 import DashboardPageSkeleton from '../components/DashboardPageSkeleton';
 import { formatTimeRange } from '../utils/timeUtils';
@@ -39,13 +79,13 @@ const StatusItem: React.FC<{ request: ServiceRequest }> = ({ request }) => {
     let statusText = `${request.duration} ${request.unit}`;
 
     if (request.status === 'in_progress' && request.selectedProvider) {
-        userText = `with ${request.selectedProvider.name}`;
+        userText = `กับ ${request.selectedProvider.name}`;
         statusIcon = <UserCircleIcon className="w-5 h-5 mr-2 text-blue-500" />;
     } else if (request.status === 'completed' && request.selectedProvider) {
-        userText = `completed by ${request.selectedProvider.name}`;
+        userText = `เสร็จสิ้นโดย ${request.selectedProvider.name}`;
         statusIcon = <CheckCircleIcon className="w-5 h-5 mr-2 text-green-500" />;
     } else {
-        userText = `by ${request.user.name}`;
+        userText = `โดย ${request.user.name}`;
     }
 
     const timeRange = formatTimeRange(request.start_time, request.end_time);
@@ -69,7 +109,33 @@ const StatusItem: React.FC<{ request: ServiceRequest }> = ({ request }) => {
 const DashboardPage: React.FC = () => {
   const { currentUser, walletBalance, isLoadingBalance } = useUser();
   const { requests } = useData();
+  const [acceptedJobs, setAcceptedJobs] = useState<JobWithDetails[]>([]);
+  const [loadingJobs, setLoadingJobs] = useState(true);
 
+  useEffect(() => {
+    const fetchAcceptedJobs = async () => {
+      if (!currentUser) return;
+      
+      try {
+        setLoadingJobs(true);
+        const response = await getMyJobApplications();
+        
+        if (response.success && response.applications) {
+          // Filter for accepted jobs only
+          const accepted = response.applications.filter((job: any) => 
+            job.status === 'accepted'
+          );
+          setAcceptedJobs(accepted);
+        }
+      } catch (error) {
+        console.error('Error fetching accepted jobs:', error);
+      } finally {
+        setLoadingJobs(false);
+      }
+    };
+
+    fetchAcceptedJobs();
+  }, [currentUser]);
 
   if (!currentUser) {
     return <DashboardPageSkeleton />;
@@ -89,8 +155,24 @@ const DashboardPage: React.FC = () => {
     <div className="font-prompt space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-primary-text font-prompt">สวัสดีคุณ {currentUser.firstName} 👋</h1>
-        <p className="text-secondary-text">ยินดีต้อนรับสู่ระบบแลกเปลี่ยนเวลา</p>
+        <h1 className="text-3xl font-bold text-primary-text font-prompt">ยินดีต้อนรับสู่ระบบธนาคารเวลา</h1>
+        
+        {/* Active Job Warning */}
+        {!loadingJobs && acceptedJobs.length > 0 && (
+          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center">
+              <ExclamationTriangleIcon className="w-5 h-5 text-yellow-600 mr-2" />
+              <div>
+                <p className="text-sm font-medium text-yellow-800">
+                  คุณมีงานที่กำลังทำอยู่ {acceptedJobs.length} งาน
+                </p>
+                <p className="text-xs text-yellow-700 mt-1">
+                  คุณสามารถรับงานใหม่ได้เมื่อทำงานปัจจุบันเสร็จสิ้น
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Credit Info */}
@@ -123,38 +205,52 @@ const DashboardPage: React.FC = () => {
       
       {/* Latest Status */}
       <div>
-        <h2 className="text-2xl font-bold text-primary-text mb-4 font-prompt">สถานะล่าสุด</h2>
+        <h2 className="text-2xl font-bold text-primary-text mb-4 font-prompt">งานที่คุณกำลังทำ</h2>
         <div className="bg-surface border border-border-color rounded-2xl p-4 space-y-4 shadow-sm">
-            {/* Pending Tasks */}
-            {pendingMyRequests.length > 0 && (
+            {/* Current Jobs */}
+            {loadingJobs ? (
+                <div className="text-center py-6">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-2"></div>
+                    <p className="text-secondary-text">กำลังโหลดงานของคุณ...</p>
+                </div>
+            ) : acceptedJobs.length > 0 ? (
                 <div>
                     <div className="flex items-center text-secondary-text mb-3">
-                        <h3 className="font-bold">My Requests</h3>
-                        <span className="ml-auto bg-muted text-primary-text text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full">{pendingMyRequests.length}</span>
+                        <h3 className="font-bold">คุณกำลังทำ งานนี้อยู่</h3>
+                        <span className="ml-auto bg-green-100 text-green-800 text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full">{acceptedJobs.length}</span>
                     </div>
-                    <div className="space-y-2">
-                        {pendingMyRequests.map(req => <StatusItem key={req.id} request={req} />)}
+                    <div className="space-y-3">
+                        {acceptedJobs.map(job => (
+                            <div key={job.id} className="bg-background border border-border-color rounded-lg p-4">
+                                <div className="flex items-start justify-between mb-2">
+                                    <h4 className="font-semibold text-primary-text">{job.title}</h4>
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <CheckCircleIcon className="w-3 h-3 mr-1" />
+                                        รับแล้ว
+                                    </span>
+                                </div>
+                                <p className="text-sm text-secondary-text mb-2">{job.description}</p>
+                                <div className="flex items-center text-xs text-secondary-text">
+                                    <ClockIcon className="w-3 h-3 mr-1" />
+                                    <span>{job.time_balance_hours} ชั่วโมง</span>
+                                    <span className="mx-2">•</span>
+                                    <span>โดย {job.creator_first_name} {job.creator_last_name}</span>
+                                </div>
+                                <div className="mt-2">
+                                    <Link 
+                                        to="/provider-jobs" 
+                                        className="text-accent hover:text-accent-hover text-sm font-medium"
+                                    >
+                                        ดูรายละเอียด →
+                                    </Link>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
-            )}
-
-            {/* Completed Tasks */}
-             {pendingHelpingJobs.length > 0 && (
-                 <div>
-                    <div className="flex items-center text-secondary-text mb-3">
-                        <h3 className="font-bold">Jobs I'm Helping With</h3>
-                        <span className="ml-auto bg-muted text-primary-text text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full">{pendingHelpingJobs.length}</span>
-                    </div>
-                    <div className="space-y-2">
-                        {pendingHelpingJobs.map(req => <StatusItem key={req.id} request={req} />)}
-                    </div>
-                </div>
-            )}
-            
-            {(pendingMyRequests.length === 0 && pendingHelpingJobs.length === 0) && (
+            ) : (
                 <div className="text-center py-6 text-secondary-text">
-                    <p>No active tasks right now.</p>
-                    <p className="text-sm">Why not <Link to="/request-help" className="text-accent underline">request some help</Link>?</p>
+                    <p className="text-lg font-medium mb-2">คุณยังไม่มีงาน</p>
                 </div>
             )}
         </div>

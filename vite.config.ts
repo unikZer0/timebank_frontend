@@ -19,7 +19,9 @@ export default defineConfig(({ mode }) => {
       plugins: [react()],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        'process.env.REACT_APP_BACKEND_URL': JSON.stringify(env.REACT_APP_BACKEND_URL),
+        'process.env.REACT_APP_LINE_LOGIN_CHANNEL_ID': JSON.stringify(env.REACT_APP_LINE_LOGIN_CHANNEL_ID)
       },
       resolve: {
         alias: {

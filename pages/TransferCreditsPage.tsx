@@ -134,20 +134,20 @@ const TransferCreditsPage: React.FC = () => {
         <div className="max-w-4xl mx-auto font-prompt">
             <Link to="/timebank" className="inline-flex items-center text-secondary-text hover:text-accent mb-6 transition-colors">
                 <ArrowLeftIcon className="w-5 h-5 mr-2" />
-                Back to Time Bank
+                กลับไปที่ธนาคารเวลา
             </Link>
-            <h1 className="text-3xl font-bold text-primary-text mb-2">Transfer Time Credits</h1>
-            <p className="text-secondary-text mb-6">You can only transfer credits to family members. Find them by ID Card Number to add them.</p>
+        <h1 className="text-3xl font-bold text-primary-text mb-2">โอนเครดิตเวลา</h1>
+        <p className="text-secondary-text mb-6">คุณสามารถโอนเครดิตให้สมาชิกในครอบครัวเท่านั้น ค้นหาพวกเขาด้วยหมายเลขบัตรประชาชนเพื่อเพิ่ม</p>
             
             <div className="bg-surface p-6 sm:p-8 rounded-xl shadow-md border border-border-color space-y-8">
                 <div className="text-center bg-accent-light p-4 rounded-lg">
-                    <p className="text-secondary-text font-medium">Your available balance</p>
+                    <p className="text-secondary-text font-medium">ยอดคงเหลือของคุณ</p>
                     {isLoadingBalance ? (
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
                       </div>
                     ) : (
-                      <p className="text-3xl font-bold text-accent">{walletBalance !== null ? walletBalance : currentUser.timeCredit} Credits</p>
+                      <p className="text-3xl font-bold text-accent">{walletBalance !== null ? walletBalance : currentUser.timeCredit} เครดิต</p>
                     )}
                 </div>
 
@@ -155,12 +155,12 @@ const TransferCreditsPage: React.FC = () => {
                     <div className="grid md:grid-cols-2 gap-8">
                         {/* Family Members */}
                         <div>
-                            <h2 className="text-xl font-semibold mb-3">Family Members</h2>
+                            <h2 className="text-xl font-semibold mb-3">สมาชิกในครอบครัว</h2>
                             <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
                                 {isLoadingFamily ? (
                                     <div className="text-center py-4">
                                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent mx-auto"></div>
-                                        <p className="text-secondary-text text-sm mt-2">Loading family members...</p>
+                                        <p className="text-secondary-text text-sm mt-2">กำลังโหลดสมาชิกในครอบครัว...</p>
                                     </div>
                                 ) : familyMembers.length > 0 ? familyMembers.map(member => (
                                     <div key={member.id} className="flex items-center justify-between p-3 bg-background rounded-lg">
@@ -180,12 +180,12 @@ const TransferCreditsPage: React.FC = () => {
 
                         {/* Search */}
                         <div>
-                           <h2 className="text-xl font-semibold mb-3">Find by Name or ID Card</h2>
+                           <h2 className="text-xl font-semibold mb-3">ค้นหาด้วยชื่อหรือบัตรประชาชน</h2>
                            <form onSubmit={handleSearch} className="flex items-start space-x-2">
                                 <div className="flex-grow">
                                     <input 
                                         type="text"
-                                        placeholder="Search by name or 13-digit ID Card Number"
+                                        placeholder="ค้นหาด้วยชื่อหรือหมายเลขบัตรประชาชน 13 หลัก"
                                         value={idCardSearch}
                                         onChange={(e) => setIdCardSearch(e.target.value)}
                                         className="w-full px-4 py-3 bg-background border border-border-color rounded-lg text-primary-text placeholder-secondary-text focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
@@ -225,7 +225,7 @@ const TransferCreditsPage: React.FC = () => {
                                                 onClick={() => selectRecipient(user)} 
                                                 className="px-3 py-1 bg-accent text-white font-bold text-sm rounded-md hover:bg-accent-hover"
                                             >
-                                                Select
+                                                เลือก
                                             </button>
                                         </div>
                                     ))}
@@ -238,7 +238,7 @@ const TransferCreditsPage: React.FC = () => {
                          <h2 className="text-xl font-semibold mb-3">Transfer Details</h2>
                          <div className="bg-background p-4 rounded-lg mb-6 flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-secondary-text">Recipient:</p>
+                                <p className="text-sm text-secondary-text">ผู้รับ:</p>
                                 <div className="flex items-center space-x-3 mt-1">
                                     <img 
                                         src={recipient.avatar_url || `https://i.pravatar.cc/150?u=${recipient.email}`} 
@@ -248,17 +248,17 @@ const TransferCreditsPage: React.FC = () => {
                                     <span className="font-bold text-lg text-primary-text">{recipient.first_name} {recipient.last_name}</span>
                                 </div>
                             </div>
-                            <button onClick={clearRecipient} className="text-sm font-semibold text-accent hover:underline">Change</button>
+                            <button onClick={clearRecipient} className="text-sm font-semibold text-accent hover:underline">เปลี่ยน</button>
                          </div>
                          <form onSubmit={handleSubmit} className="space-y-4">
                              <FormField
-                                label="Amount to Transfer"
+                                label="จำนวนที่ต้องการโอน"
                                 name="amount"
                                 type="number"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
                                 required
-                                placeholder="e.g., 5"
+                                placeholder="เช่น 5"
                             />
                             <div className="pt-2">
                                 <button
@@ -269,10 +269,10 @@ const TransferCreditsPage: React.FC = () => {
                                     {isTransferring ? (
                                         <div className="flex items-center justify-center">
                                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                                            Transferring...
+                                            กำลังโอน...
                                         </div>
                                     ) : (
-                                        `Confirm & Transfer ${amount && `${amount} Credits`}`
+                                        `ยืนยันและโอน ${amount && `${amount} เครดิต`}`
                                     )}
                                 </button>
                             </div>

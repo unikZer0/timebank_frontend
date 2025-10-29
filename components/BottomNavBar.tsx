@@ -1,12 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { ChartBarIcon, QuestionMarkCircleIcon, UserCircleIcon, BanknotesIcon } from '@heroicons/react/24/solid';
+import { ChartBarIcon, QuestionMarkCircleIcon, UserCircleIcon, BanknotesIcon, CheckCircleIcon, BriefcaseIcon, ClockIcon } from '@heroicons/react/24/solid';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
-  { name: 'Request Help', href: '/request-help', icon: QuestionMarkCircleIcon },
-  { name: 'Timebank', href: '/timebank', icon: BanknotesIcon },
-  { name: 'Profile', href: '/profile', icon: UserCircleIcon },
+  { name: 'งานของฉัน', href: '/my-jobs', icon: BriefcaseIcon },
+  { name: 'งานที่รับแล้ว', href: '/provider-jobs', icon: CheckCircleIcon },
+  { name: 'ประวัติงาน', href: '/history', icon: ClockIcon },
+  { name: 'โปรไฟล์', href: '/profile', icon: UserCircleIcon },
 ];
 
 const BottomNavBar: React.FC = () => {

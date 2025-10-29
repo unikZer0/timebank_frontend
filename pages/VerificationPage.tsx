@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiRegister } from '../services/apiService';
+import { useToast } from '../context/ToastContext';
 
 const VerificationPage: React.FC = () => {
   const [registrationData, setRegistrationData] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   useEffect(() => {
     const data = sessionStorage.getItem('registrationData');
@@ -15,16 +19,64 @@ const VerificationPage: React.FC = () => {
     }
   }, [navigate]);
 
-  const handleSubmit = () => {
-    // Here you would typically send the data to your backend API
-    console.log('Submitting registration data:', registrationData);
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
     
-    // Clear session data
-    sessionStorage.removeItem('registrationData');
+    setIsSubmitting(true);
     
-    // Show success message and redirect
-    alert('ข้อมูลของคุณได้ถูกส่งไปยังผู้ดูแลระบบแล้ว กรุณารอการตรวจสอบ');
-    navigate('/login');
+    try {
+      // Get user's current location
+      let lat = 0, lon = 0;
+      try {
+        if (navigator.geolocation) {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              timeout: 10000,
+              enableHighAccuracy: true
+            });
+          });
+          lat = position.coords.latitude;
+          lon = position.coords.longitude;
+        }
+      } catch (locationError) {
+        console.warn('Could not get location for registration:', locationError);
+        // Continue with default coordinates
+      }
+
+      // Call the backend API with the correct format
+      const response = await apiRegister({
+        first_name: registrationData.firstName,
+        last_name: registrationData.lastName,
+        email: registrationData.email,
+        phone: registrationData.phone || '',
+        password: registrationData.password,
+        dob: registrationData.dob,
+        lat: lat,
+        lon: lon,
+        national_id: registrationData.idCardNumber,
+        skills: registrationData.skills || [],
+        embedding: null
+      });
+
+      if (response.success) {
+        // Clear session data
+        sessionStorage.removeItem('registrationData');
+        
+        // Store token
+        localStorage.setItem('token', response.token);
+        
+        // Show success message and redirect
+        showToast('Registration successful! Please wait for admin verification.', 'success');
+        navigate('/login');
+      } else {
+        showToast(response.message || 'Registration failed', 'error');
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      showToast(error.message || 'Registration failed', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleBack = () => {
@@ -100,10 +152,6 @@ const VerificationPage: React.FC = () => {
                   <span className="text-secondary-text">เบอร์โทรศัพท์:</span>
                   <p className="text-primary-text">{registrationData.phone || 'ไม่ระบุ'}</p>
                 </div>
-                <div>
-                  <span className="text-secondary-text">ที่อยู่:</span>
-                  <p className="text-primary-text">{registrationData.address || 'ไม่ระบุ'}</p>
-                </div>
               </div>
             </div>
 
@@ -121,12 +169,6 @@ const VerificationPage: React.FC = () => {
                     ))}
                   </div>
                 </div>
-                {registrationData.bio && (
-                  <div>
-                    <span className="text-secondary-text text-sm">แนะนำตัว:</span>
-                    <p className="text-primary-text mt-1">{registrationData.bio}</p>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -159,9 +201,10 @@ const VerificationPage: React.FC = () => {
             </button>
             <button
               onClick={handleSubmit}
-              className="px-8 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-all duration-200"
+              disabled={isSubmitting}
+              className="px-8 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              ส่งข้อมูล
+              {isSubmitting ? 'กำลังส่งข้อมูล...' : 'ส่งข้อมูล'}
             </button>
           </div>
           

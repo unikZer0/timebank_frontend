@@ -7,7 +7,6 @@ const SkillsPage: React.FC = () => {
   const [formData, setFormData] = useState({
     skills: [] as string[],
     newSkill: '',
-    bio: '',
   });
   const navigate = useNavigate();
 
@@ -17,6 +16,11 @@ const SkillsPage: React.FC = () => {
   };
 
   const addSkill = () => {
+    if (formData.skills.length >= 3) {
+      alert('คุณสามารถเพิ่มทักษะได้สูงสุด 3 ทักษะ');
+      return;
+    }
+    
     if (formData.newSkill.trim() && !formData.skills.includes(formData.newSkill.trim())) {
       setFormData(prev => ({
         ...prev,
@@ -51,7 +55,6 @@ const SkillsPage: React.FC = () => {
     const completeData = {
       ...previousData,
       skills: formData.skills,
-      bio: formData.bio
     };
     
     sessionStorage.setItem('registrationData', JSON.stringify(completeData));
@@ -113,7 +116,15 @@ const SkillsPage: React.FC = () => {
           <div className="space-y-6">
             {/* Skills Section */}
             <div>
-              <label className="block text-primary-text font-medium mb-3">ทักษะของคุณ *</label>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-primary-text font-medium">ทักษะของคุณ *</label>
+                <span className="text-sm text-secondary-text">
+                  {formData.skills.length}/3 ทักษะ
+                  {formData.skills.length >= 3 && (
+                    <span className="text-red-500 ml-1">(ถึงขีดจำกัดแล้ว)</span>
+                  )}
+                </span>
+              </div>
               <div className="flex space-x-2 mb-3">
                 <input
                   type="text"
@@ -122,11 +133,17 @@ const SkillsPage: React.FC = () => {
                   onKeyPress={handleKeyPress}
                   placeholder="เช่น การสอน, การทำอาหาร, การซ่อมแซม"
                   className="flex-1 px-4 py-2 border border-border-color rounded-lg focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                  disabled={formData.skills.length >= 3}
                 />
                 <button
                   type="button"
                   onClick={addSkill}
-                  className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
+                  disabled={formData.skills.length >= 3}
+                  className={`px-4 py-2 rounded-lg transition-colors ${
+                    formData.skills.length >= 3
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-accent text-white hover:bg-accent-hover'
+                  }`}
                 >
                   เพิ่ม
                 </button>

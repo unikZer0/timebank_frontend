@@ -10,12 +10,17 @@ import {
   BanknotesIcon,
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
+  BriefcaseIcon,
+  CheckCircleIcon,
 } from '@heroicons/react/24/solid';
 import { useUser } from '../context/UserContext';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
   { name: 'ขอความช่วยเหลือ', href: '/request-help', icon: QuestionMarkCircleIcon },
+  { name: 'งานของฉัน', href: '/my-jobs', icon: BriefcaseIcon },
+  { name: 'งานที่รับแล้ว', href: '/provider-jobs', icon: CheckCircleIcon },
+  { name: 'ประวัติงาน', href: '/history', icon: ClockIcon },
   { name: 'เครดิตของฉัน', href: '/timebank', icon: BanknotesIcon },
   { name: 'โปรไฟล์', href: '/profile', icon: UserCircleIcon },
 ];
@@ -105,8 +110,8 @@ const MobileHeader: React.FC = () => {
                     {currentUser?.avatarUrl ? (
                         <img src={currentUser.avatarUrl} alt="avatar" className="w-12 h-12 rounded-full object-cover" />
                     ) : (
-                        <div className="w-12 h-12 rounded-full bg-muted text-accent flex items-center justify-center text-xl font-bold">
-                            {currentUser?.firstName.charAt(0)}
+                        <div className="w-12 h-12 rounded-full bg-accent text-white flex items-center justify-center text-2xl font-bold">
+                            {currentUser?.firstName?.charAt(0)?.toUpperCase() || currentUser?.email?.charAt(0)?.toUpperCase() || 'U'}
                         </div>
                     )}
                     <div className="ml-3 overflow-hidden">

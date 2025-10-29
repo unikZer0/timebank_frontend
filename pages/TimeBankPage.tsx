@@ -107,14 +107,14 @@ const TimeBankPage: React.FC = () => {
   return (
     <div className="font-prompt space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-primary-text font-prompt">My Time Bank</h1>
-        <p className="text-secondary-text">View your credit balance and transaction history.</p>
+        <h1 className="text-3xl font-bold text-primary-text font-prompt">ธนาคารเวลาของฉัน</h1>
+        <p className="text-secondary-text">ดูยอดเครดิตและประวัติการทำธุรกรรม</p>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Balance Card */}
         <div className="lg:col-span-1 bg-surface border border-border-color rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center">
-            <p className="text-secondary-text font-medium">Your Current Balance</p>
+            <p className="text-secondary-text font-medium">ยอดคงเหลือปัจจุบัน</p>
             {isLoadingBalance ? (
               <div className="flex items-center justify-center my-3">
                 <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-accent"></div>
@@ -122,21 +122,21 @@ const TimeBankPage: React.FC = () => {
             ) : (
               <p className="text-6xl font-bold text-accent my-3">{walletBalance !== null ? walletBalance : currentUser.timeCredit}</p>
             )}
-            <p className="text-sm font-semibold text-secondary-text bg-accent-light px-3 py-1 rounded-full inline-block">Time Credits</p>
+              <p className="text-sm font-semibold text-secondary-text bg-accent-light px-3 py-1 rounded-full inline-block">เครดิตเวลา</p>
             <Link to="/timebank/transfer" className="mt-6 w-full flex items-center justify-center px-4 py-3 bg-accent text-white font-bold rounded-lg hover:bg-accent-hover transition-colors shadow-lg shadow-accent/20">
                 <ArrowsRightLeftIcon className="w-5 h-5 mr-2" />
-                Transfer Credits
+                โอนเครดิต
             </Link>
         </div>
         
         {/* Transaction History */}
         <div className="lg:col-span-2 bg-surface border border-border-color rounded-2xl p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-primary-text mb-4">Recent Transactions</h2>
+            <h2 className="text-xl font-bold text-primary-text mb-4">ธุรกรรมล่าสุด</h2>
             <div ref={scrollContainerRef} className="max-h-96 overflow-y-auto space-y-3 pr-2">
                 {isLoadingTransactions ? (
                     <div className="text-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto"></div>
-                        <p className="text-secondary-text mt-2">Loading transactions...</p>
+                        <p className="text-secondary-text mt-2">กำลังโหลดธุรกรรม...</p>
                     </div>
                 ) : transactions.length > 0 ? displayedTransactions.map(tx => {
                     const isIncoming = tx.to_user_id === currentUser.id;
@@ -155,7 +155,7 @@ const TimeBankPage: React.FC = () => {
                         </div>
                     );
                 }) : (
-                    <p className="text-secondary-text text-center py-4">No transactions yet.</p>
+                    <p className="text-secondary-text text-center py-4">ยังไม่มีธุรกรรม</p>
                 )}
             </div>
         </div>

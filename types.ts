@@ -19,7 +19,6 @@ export interface User extends UserStub {
   lastName: string;
   email: string;
   idCardNumber: string;
-  bio: string;
   skills: string[];
   timeCredit: number;
   stats: UserStats;

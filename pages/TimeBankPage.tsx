@@ -53,6 +53,7 @@ const TimeBankPage: React.FC = () => {
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
   const [visibleTransactions, setVisibleTransactions] = useState(5);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -141,23 +142,50 @@ const TimeBankPage: React.FC = () => {
                 ) : transactions.length > 0 ? displayedTransactions.map(tx => {
                     const isIncoming = tx.to_user_id === currentUser.id;
                     return (
-                        <div key={tx.id} className="flex items-center justify-between p-3 bg-background rounded-lg">
+                        <button key={tx.id} onClick={() => setSelectedTransaction(tx)} className="w-full text-left flex items-center justify-between p-3 bg-background rounded-lg hover:bg-muted transition-colors">
                             <div className="flex items-center space-x-4">
                                 <TransactionIcon transaction={tx} currentUserId={currentUser.id} />
                                 <div>
                                     <p className="font-semibold text-primary-text">{getTransactionDescription(tx, currentUser.id)}</p>
-                                    <p className="text-sm text-secondary-text">{new Date(tx.created_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                                    <p className="text-sm text-secondary-text">{new Date(tx.created_at).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })}</p>
                                 </div>
                             </div>
                             <p className={`font-bold text-lg ${isIncoming ? 'text-green-600' : 'text-red-600'}`}>
                                 {isIncoming ? '+' : '-'}{tx.amount}
                             </p>
-                        </div>
+                        </button>
                     );
                 }) : (
                     <p className="text-secondary-text text-center py-4">ยังไม่มีธุรกรรม</p>
                 )}
             </div>
+            {selectedTransaction && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-surface border border-border-color rounded-2xl shadow-lg w-full max-w-md overflow-hidden">
+                  <div className="p-5 border-b border-border-color flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-primary-text">รายละเอียดธุรกรรม</h3>
+                    <button onClick={() => setSelectedTransaction(null)} className="text-secondary-text hover:text-primary-text">×</button>
+                  </div>
+                  <div className="p-5 space-y-3 text-sm">
+                    <div className="flex justify-between"><span className="text-secondary-text">ประเภท</span><span className="text-primary-text">{selectedTransaction.type}</span></div>
+                    <div className="flex justify-between"><span className="text-secondary-text">จำนวน</span><span className={`font-semibold ${selectedTransaction.to_user_id === currentUser.id ? 'text-green-600' : 'text-red-600'}`}>{selectedTransaction.to_user_id === currentUser.id ? '+' : '-'}{selectedTransaction.amount}</span></div>
+                    <div className="flex justify-between"><span className="text-secondary-text">วันที่และเวลา</span><span className="text-primary-text">{new Date(selectedTransaction.created_at).toLocaleString('th-TH', { dateStyle: 'full', timeStyle: 'medium' })}</span></div>
+                    {selectedTransaction.type === 'transfer' && (
+                      <>
+                        <div className="flex justify-between"><span className="text-secondary-text">จาก</span><span className="text-primary-text">{selectedTransaction.from_first_name} {selectedTransaction.from_last_name}</span></div>
+                        <div className="flex justify-between"><span className="text-secondary-text">ถึง</span><span className="text-primary-text">{selectedTransaction.to_first_name} {selectedTransaction.to_last_name}</span></div>
+                      </>
+                    )}
+                    {selectedTransaction.metadata && (
+                      <div>
+                        <span className="block text-secondary-text mb-1">ข้อมูลเพิ่มเติม</span>
+                        <pre className="text-xs bg-background p-2 rounded-md overflow-auto max-h-40">{JSON.stringify(selectedTransaction.metadata, null, 2)}</pre>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
         </div>
       </div>
     </div>

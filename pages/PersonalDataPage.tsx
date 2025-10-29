@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FormField from '../components/FormField';
 import FormTextArea from '../components/FormTextArea';
-import NationalIdValidation from '../components/NationalIdValidation';
+// NationalIdValidation removed
 
 const PersonalDataPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -16,10 +16,7 @@ const PersonalDataPage: React.FC = () => {
     confirmPassword: '',
   });
   
-  const [nationalIdValidation, setNationalIdValidation] = useState({
-    isValid: false,
-    data: null
-  });
+  // Removed NationalIdValidation state
   
   const navigate = useNavigate();
 
@@ -30,18 +27,15 @@ const PersonalDataPage: React.FC = () => {
     if (name === 'phone') {
       const filteredValue = value.replace(/\D/g, '').slice(0, 10);
       setFormData(prev => ({ ...prev, [name]: filteredValue }));
+    } else if (name === 'idCardNumber') {
+      const filteredValue = value.replace(/\D/g, '').slice(0, 13);
+      setFormData(prev => ({ ...prev, [name]: filteredValue }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
 
-  const handleNationalIdChange = (value: string) => {
-    setFormData(prev => ({ ...prev, idCardNumber: value }));
-  };
-
-  const handleNationalIdValidation = (isValid: boolean, data?: any) => {
-    setNationalIdValidation({ isValid, data });
-  };
+  // Removed NationalIdValidation handlers
 
   const handleNext = () => {
     // Basic validation
@@ -55,21 +49,9 @@ const PersonalDataPage: React.FC = () => {
       return;
     }
 
-    // Enhanced National ID validation using real-time validation result
-    if (!nationalIdValidation.isValid) {
-      alert('กรุณากรอกเลขบัตรประชาชนที่ถูกต้อง');
-      return;
-    }
-
-    // Check for duplicate National ID
-    if (nationalIdValidation.data?.duplicateCheck?.exists) {
-      alert('เลขบัตรประชาชนนี้มีอยู่ในระบบแล้ว กรุณาตรวจสอบอีกครั้ง');
-      return;
-    }
-
-    // Check criminal record
-    if (nationalIdValidation.data?.externalVerification?.details?.criminalRecord?.criminal_record) {
-      alert('ไม่สามารถลงทะเบียนได้เนื่องจากมีประวัติอาชญากรรม');
+    // Basic National ID validation (13 digits numeric)
+    if (formData.idCardNumber.length !== 13 || !/^\d{13}$/.test(formData.idCardNumber)) {
+      alert('เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก');
       return;
     }
 
@@ -80,10 +62,7 @@ const PersonalDataPage: React.FC = () => {
     }
 
     // Store form data with validation results in sessionStorage for multi-step process
-    const registrationData = {
-      ...formData,
-      nationalIdValidation: nationalIdValidation.data
-    };
+    const registrationData = { ...formData };
     sessionStorage.setItem('registrationData', JSON.stringify(registrationData));
     navigate('/register/skills');
   };
@@ -180,24 +159,16 @@ const PersonalDataPage: React.FC = () => {
               maxLength={10}
             />
             
-            <div>
-              <label className="block text-sm font-medium text-primary-text mb-2">
-                เลขบัตรประชาชน (13 หลัก) <span className="text-red-500">*</span>
-              </label>
-              <NationalIdValidation
-                value={formData.idCardNumber}
-                onChange={handleNationalIdChange}
-                onValidationChange={handleNationalIdValidation}
-                birthDate={formData.dob}
-                checkDuplicates={true}
-                verifyExternal={true}
-                showFormatted={true}
-                showExtractedInfo={false}
-                className="w-full"
-                placeholder="1234567890123"
-                required={true}
-              />
-            </div>
+            <FormField
+              label="เลขบัตรประชาชน (13 หลัก) *"
+              name="idCardNumber"
+              type="text"
+              value={formData.idCardNumber}
+              onChange={handleChange}
+              required
+              maxLength={13}
+              placeholder="1234567890123"
+            />
             
             <FormField
               label="วันเกิด *"
@@ -242,12 +213,7 @@ const PersonalDataPage: React.FC = () => {
             </button>
             <button
               onClick={handleNext}
-              disabled={!nationalIdValidation.isValid}
-              className={`px-8 py-3 font-semibold rounded-lg transition-all duration-200 ${
-                nationalIdValidation.isValid 
-                  ? 'bg-accent text-white hover:bg-accent-hover' 
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
+              className="px-8 py-3 bg-accent text-white font-semibold rounded-lg hover:bg-accent-hover transition-all duration-200"
             >
               ต่อไป
             </button>

@@ -74,7 +74,9 @@ export interface FamilyMember {
     last_name: string;
     email: string;
     id_card_number: string;
+    national_id?: string; // optional: available for search results
     avatar_url?: string;
+    household?: string | number;
 }
 
 export interface TransferHistory {

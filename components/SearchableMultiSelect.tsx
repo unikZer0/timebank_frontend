@@ -8,6 +8,8 @@ interface SearchableMultiSelectProps {
   placeholder?: string;
   label?: string;
   loading?: boolean;
+  maxSelections?: number;
+  onMaxSelectionReached?: (max: number) => void;
 }
 
 const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
@@ -16,7 +18,9 @@ const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
   onSelectionChange,
   placeholder = "Search and select skills...",
   label,
-  loading = false
+  loading = false,
+  maxSelections,
+  onMaxSelectionReached
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,6 +53,11 @@ const SearchableMultiSelect: React.FC<SearchableMultiSelectProps> = ({
     if (selectedValues.includes(option)) {
       onSelectionChange(selectedValues.filter(val => val !== option));
     } else {
+      if (maxSelections && selectedValues.length >= maxSelections) {
+        onMaxSelectionReached?.(maxSelections);
+        return;
+      }
+
       onSelectionChange([...selectedValues, option]);
     }
   };

@@ -1,34 +1,75 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import FormField from '../components/FormField';
-import FormTextArea from '../components/FormTextArea';
+import SearchableMultiSelect from '../components/SearchableMultiSelect';
+import { getAllUserSkills } from '../services/apiService';
 
 const SkillsPage: React.FC = () => {
   const [formData, setFormData] = useState({
     skills: [] as string[],
-    newSkill: '',
   });
+  const [availableSkills, setAvailableSkills] = useState<string[]>([]);
+  const [skillsLoading, setSkillsLoading] = useState<boolean>(true);
   const navigate = useNavigate();
+  const MAX_SKILLS = 3;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const normalizeSkill = (skill: any): string | null => {
+    if (typeof skill === 'string') {
+      return skill.trim();
+    }
+
+    if (skill && typeof skill === 'object') {
+      if (typeof skill.name === 'string') {
+        return skill.name.trim();
+      }
+
+      if (typeof skill.skill_name === 'string') {
+        return skill.skill_name.trim();
+      }
+    }
+
+    if (skill != null && typeof skill.toString === 'function') {
+      return String(skill).trim();
+    }
+
+    return null;
   };
 
-  const addSkill = () => {
-    if (formData.skills.length >= 3) {
-      alert('คุณสามารถเพิ่มทักษะได้สูงสุด 3 ทักษะ');
-      return;
-    }
-    
-    if (formData.newSkill.trim() && !formData.skills.includes(formData.newSkill.trim())) {
-      setFormData(prev => ({
-        ...prev,
-        skills: [...prev.skills, prev.newSkill.trim()],
-        newSkill: ''
-      }));
-    }
+  const mergeSkills = (previous: string[], incoming: any[]): string[] => {
+    const normalizedIncoming = incoming
+      .map(normalizeSkill)
+      .filter((name): name is string => Boolean(name));
+
+    const merged = new Set<string>([...previous, ...normalizedIncoming]);
+    return Array.from(merged).sort((a, b) => a.localeCompare(b));
   };
+
+  useEffect(() => {
+    const storedData = JSON.parse(sessionStorage.getItem('registrationData') || '{}');
+    if (storedData.skills && Array.isArray(storedData.skills)) {
+      const normalizedStoredSkills = storedData.skills
+        .map(normalizeSkill)
+        .filter((name: string | null): name is string => Boolean(name));
+      const uniqueStoredSkills = Array.from(new Set(normalizedStoredSkills));
+      setFormData(prev => ({ ...prev, skills: uniqueStoredSkills.slice(0, MAX_SKILLS) }));
+      setAvailableSkills(prev => mergeSkills(prev, uniqueStoredSkills));
+    }
+
+    const fetchSkills = async () => {
+      try {
+        setSkillsLoading(true);
+        const response = await getAllUserSkills();
+        if (response.success && Array.isArray(response.skills)) {
+          setAvailableSkills(prev => mergeSkills(prev, response.skills));
+        }
+      } catch (error) {
+        console.error('Error fetching skills:', error);
+      } finally {
+        setSkillsLoading(false);
+      }
+    };
+
+    fetchSkills();
+  }, []);
 
   const removeSkill = (skillToRemove: string) => {
     setFormData(prev => ({
@@ -37,11 +78,12 @@ const SkillsPage: React.FC = () => {
     }));
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addSkill();
+  const handleSkillsChange = (selectedSkills: string[]) => {
+    if (selectedSkills.length > MAX_SKILLS) {
+      alert('คุณสามารถเลือกทักษะได้สูงสุด 3 ทักษะ');
+      return;
     }
+    setFormData(prev => ({ ...prev, skills: selectedSkills }));
   };
 
   const handleNext = () => {
@@ -119,36 +161,25 @@ const SkillsPage: React.FC = () => {
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-primary-text font-medium">ทักษะของคุณ *</label>
                 <span className="text-sm text-secondary-text">
-                  {formData.skills.length}/3 ทักษะ
-                  {formData.skills.length >= 3 && (
+                  {formData.skills.length}/{MAX_SKILLS} ทักษะ
+                  {formData.skills.length >= MAX_SKILLS && (
                     <span className="text-red-500 ml-1">(ถึงขีดจำกัดแล้ว)</span>
                   )}
                 </span>
               </div>
-              <div className="flex space-x-2 mb-3">
-                <input
-                  type="text"
-                  value={formData.newSkill}
-                  onChange={(e) => setFormData(prev => ({ ...prev, newSkill: e.target.value }))}
-                  onKeyPress={handleKeyPress}
-                  placeholder="เช่น การสอน, การทำอาหาร, การซ่อมแซม"
-                  className="flex-1 px-4 py-2 border border-border-color rounded-lg focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-                  disabled={formData.skills.length >= 3}
-                />
-                <button
-                  type="button"
-                  onClick={addSkill}
-                  disabled={formData.skills.length >= 3}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
-                    formData.skills.length >= 3
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-accent text-white hover:bg-accent-hover'
-                  }`}
-                >
-                  เพิ่ม
-                </button>
-              </div>
-              
+              <SearchableMultiSelect
+                options={availableSkills}
+                selectedValues={formData.skills}
+                onSelectionChange={handleSkillsChange}
+                placeholder="ค้นหาและเลือกทักษะของคุณ..."
+                loading={skillsLoading}
+                maxSelections={MAX_SKILLS}
+                onMaxSelectionReached={() => {
+                  alert('คุณสามารถเลือกทักษะได้สูงสุด 3 ทักษะ');
+                }}
+              />
+              <p className="text-xs text-secondary-text mt-2">เลือกทักษะสูงสุด {MAX_SKILLS} รายการ</p>
+
               {/* Skills List */}
               <div className="flex flex-wrap gap-2">
                 {formData.skills.map((skill, index) => (

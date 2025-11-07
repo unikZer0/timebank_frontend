@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import FormField from '../components/FormField';
 import { ClockIcon, ArrowLeftIcon } from '@heroicons/react/24/solid';
 import { useUser } from '../context/UserContext';
+import { useToast } from '../context/ToastContext';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login } = useUser();
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   const [location, setLocation] = useState<{ lat: number; lon: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<'requesting' | 'granted' | 'denied' | 'idle'>('requesting');
@@ -51,7 +53,10 @@ const LoginPage: React.FC = () => {
       if (result.success) {
         navigate('/dashboard');
       } else {
-        alert(result.message || 'Login failed');
+        const message = result.message || 'Login failed';
+        const lower = message.toLowerCase();
+        const toastType = lower.includes('pending verification') ? 'info' : 'error';
+        showToast(message, toastType);
       }
     })();
   };

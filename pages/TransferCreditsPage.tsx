@@ -6,9 +6,12 @@ import { useUser } from '../context/UserContext';
 import { useToast } from '../context/ToastContext';
 import { ArrowLeftIcon, MagnifyingGlassIcon, UserCircleIcon } from '@heroicons/react/24/solid';
 import { FamilyMember } from '../types';
-import { transferCredits, getFamilyMembers, searchUserByIdCard } from '../services/apiService';
+import { transferCredits, getFamilyMembers, searchUserByIdCard, getPersonRelationsByNationalId } from '../services/apiService';
+import { getRelationshipBetween } from '../services/apiService';
+
 
 const TransferCreditsPage: React.FC = () => {
+    const [relationshipMap, setRelationshipMap] = useState<Record<number, string>>({});
     const { currentUser, walletBalance, isLoadingBalance } = useUser();
     const { showToast } = useToast();
     const navigate = useNavigate();
@@ -23,8 +26,38 @@ const TransferCreditsPage: React.FC = () => {
     const [amount, setAmount] = useState('');
     const [error, setError] = useState('');
     const [isTransferring, setIsTransferring] = useState(false);
+    const [expandedRelationsFor, setExpandedRelationsFor] = useState<string | null>(null); // national_id
+    const [relationsCache, setRelationsCache] = useState<Record<string, any>>({});
 
-    // Fetch family members on component mount
+    const renderInitialAvatar = (firstName?: string, lastName?: string) => {
+        const initial = (firstName && firstName[0]) || (lastName && lastName[0]) || '?';
+        return (
+            <div className="w-10 h-10 rounded-full bg-accent text-white flex items-center justify-center font-bold">
+                {initial.toUpperCase()}
+            </div>
+        );
+    };
+
+    const referenceHousehold = familyMembers.length > 0 ? familyMembers[0].household : undefined;
+
+    const toggleRelations = async (nationalId?: string) => {
+        if (!nationalId) return;
+        if (expandedRelationsFor === nationalId) {
+            setExpandedRelationsFor(null);
+            return;
+        }
+        if (!relationsCache[nationalId]) {
+            try {
+                const rel = await getPersonRelationsByNationalId(nationalId);
+                if (rel?.success) {
+                    setRelationsCache(prev => ({ ...prev, [nationalId]: rel }));
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+        setExpandedRelationsFor(nationalId);
+    };
     useEffect(() => {
         const fetchFamilyMembers = async () => {
             try {
@@ -49,6 +82,7 @@ const TransferCreditsPage: React.FC = () => {
             fetchFamilyMembers();
         }
     }, [currentUser]);
+
 
     if (!currentUser) {
         return <div>Loading...</div>;
@@ -165,13 +199,21 @@ const TransferCreditsPage: React.FC = () => {
                                 ) : familyMembers.length > 0 ? familyMembers.map(member => (
                                     <div key={member.id} className="flex items-center justify-between p-3 bg-background rounded-lg">
                                         <div className="flex items-center space-x-3">
-                                            <img 
-                                                src={member.avatar_url || `https://i.pravatar.cc/150?u=${member.email}`} 
-                                                alt={`${member.first_name} ${member.last_name}`} 
-                                                className="w-10 h-10 rounded-full" 
-                                            />
-                                            <span className="font-semibold text-primary-text">{member.first_name} {member.last_name}</span>
+                                            {renderInitialAvatar(member.first_name, member.last_name)}
+                                            <div>
+                                                <span className="font-semibold text-primary-text">{member.first_name} {member.last_name}</span>
+                                                {member.household !== undefined && (
+                                                    <div className="mt-0.5">
+                                                        <span className={`text-xs px-2 py-0.5 rounded ${referenceHousehold !== undefined && member.household === referenceHousehold ? 'bg-green-100 text-green-700' : 'bg-muted text-secondary-text'}`}>
+                                                        ครัวเรือน: {String(member.household)}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
+                                        <div className="text-xs text-accent mt-1">
+  ความสัมพันธ์: {relationshipMap[member.id] || "-"}
+</div>
                                         <button onClick={() => selectRecipient(member)} className="px-3 py-1 bg-accent text-white font-bold text-sm rounded-md hover:bg-accent-hover">Select</button>
                                     </div>
                                 )) : <p className="text-secondary-text text-sm p-3 bg-background rounded-lg">No family members added yet.</p>}
@@ -208,27 +250,53 @@ const TransferCreditsPage: React.FC = () => {
                            {/* Search Results */}
                            {searchedUsers.length > 0 && (
                                 <div className="mt-4 space-y-2 max-h-60 overflow-y-auto">
-                                    {searchedUsers.map(user => (
+                                    {searchedUsers.map(user => {
+                                        const isInFamily = familyMembers.some(m => m.id === user.id);
+                                        return (
                                         <div key={user.id} className="p-3 bg-background rounded-lg flex items-center justify-between animate-subtle-enter">
                                             <div className="flex items-center space-x-3">
-                                                <img 
-                                                    src={user.avatar_url || `https://i.pravatar.cc/150?u=${user.email}`} 
-                                                    alt={`${user.first_name} ${user.last_name}`} 
-                                                    className="w-10 h-10 rounded-full" 
-                                                />
+                                                {renderInitialAvatar(user.first_name, user.last_name)}
                                                 <div>
                                                     <span className="font-semibold text-primary-text">{user.first_name} {user.last_name}</span>
                                                     <p className="text-xs text-secondary-text">ID: {user.national_id}</p>
+                                                    {user.household !== undefined && (
+                                                        <div className="mt-1">
+                                                            <span className={`inline-block text-xs px-2 py-0.5 rounded ${referenceHousehold !== undefined && user.household === referenceHousehold ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                                                Household: {String(user.household)} {referenceHousehold !== undefined && user.household === referenceHousehold ? '(same)' : ''}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {!isInFamily && (
+                                                        <span className="block mt-1 text-xs px-2 py-0.5 rounded bg-muted text-secondary-text">ไม่ใช่สมาชิกในครอบครัวของคุณ</span>
+                                                    )}
+                                                    <button onClick={() => toggleRelations(user.national_id)} className="mt-2 text-xs text-accent hover:underline">
+                                                        {expandedRelationsFor === user.national_id ? 'ซ่อนความสัมพันธ์' : 'ดูความสัมพันธ์'}
+                                                    </button>
+                                                    {expandedRelationsFor === user.national_id && relationsCache[user.national_id] && (
+                                                        <div className="mt-2 bg-surface border border-border-color rounded p-2 text-xs text-primary-text">
+                                                            <div>Family ID: {relationsCache[user.national_id].family_id}</div>
+                                                            <div className="mt-1">
+                                                                <span className="font-semibold">พ่อแม่:</span> {relationsCache[user.national_id].parents.map((p: any) => `${p.first_name} ${p.last_name}`).join(', ') || '-'}
+                                                            </div>
+                                                            <div className="mt-1">
+                                                                <span className="font-semibold">พี่น้อง:</span> {relationsCache[user.national_id].siblings.map((p: any) => `${p.first_name} ${p.last_name}`).join(', ') || '-'}
+                                                            </div>
+                                                            <div className="mt-1">
+                                                                <span className="font-semibold">บุตร:</span> {relationsCache[user.national_id].children.map((p: any) => `${p.first_name} ${p.last_name}`).join(', ') || '-'}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             <button 
-                                                onClick={() => selectRecipient(user)} 
-                                                className="px-3 py-1 bg-accent text-white font-bold text-sm rounded-md hover:bg-accent-hover"
+                                                onClick={() => isInFamily && selectRecipient(user)} 
+                                                disabled={!isInFamily}
+                                                className={`px-3 py-1 font-bold text-sm rounded-md ${isInFamily ? 'bg-accent text-white hover:bg-accent-hover' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
                                             >
                                                 เลือก
                                             </button>
                                         </div>
-                                    ))}
+                                    );})}
                                 </div>
                            )}
                         </div>
@@ -240,11 +308,7 @@ const TransferCreditsPage: React.FC = () => {
                             <div>
                                 <p className="text-sm text-secondary-text">ผู้รับ:</p>
                                 <div className="flex items-center space-x-3 mt-1">
-                                    <img 
-                                        src={recipient.avatar_url || `https://i.pravatar.cc/150?u=${recipient.email}`} 
-                                        alt={`${recipient.first_name} ${recipient.last_name}`} 
-                                        className="w-10 h-10 rounded-full" 
-                                    />
+                                    {renderInitialAvatar(recipient.first_name, recipient.last_name)}
                                     <span className="font-bold text-lg text-primary-text">{recipient.first_name} {recipient.last_name}</span>
                                 </div>
                             </div>

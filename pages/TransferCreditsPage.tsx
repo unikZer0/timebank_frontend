@@ -1,17 +1,15 @@
-
+// ✅ Full updated file with Thai relationship mapping and relationshipMap population
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import FormField from '../components/FormField';
 import { useUser } from '../context/UserContext';
 import { useToast } from '../context/ToastContext';
-import { ArrowLeftIcon, MagnifyingGlassIcon, UserCircleIcon } from '@heroicons/react/24/solid';
+import { ArrowLeftIcon, MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 import { FamilyMember } from '../types';
 import { transferCredits, getFamilyMembers, searchUserByIdCard, getPersonRelationsByNationalId } from '../services/apiService';
-import { getRelationshipBetween } from '../services/apiService';
-
-
 const TransferCreditsPage: React.FC = () => {
     const [relationshipMap, setRelationshipMap] = useState<Record<number, string>>({});
+
     const { currentUser, walletBalance, isLoadingBalance } = useUser();
     const { showToast } = useToast();
     const navigate = useNavigate();
@@ -21,13 +19,11 @@ const TransferCreditsPage: React.FC = () => {
     const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
     const [isLoadingFamily, setIsLoadingFamily] = useState(true);
     const [isSearching, setIsSearching] = useState(false);
-    
+
     const [recipient, setRecipient] = useState<FamilyMember | null>(null);
     const [amount, setAmount] = useState('');
     const [error, setError] = useState('');
     const [isTransferring, setIsTransferring] = useState(false);
-    const [expandedRelationsFor, setExpandedRelationsFor] = useState<string | null>(null); // national_id
-    const [relationsCache, setRelationsCache] = useState<Record<string, any>>({});
 
     const renderInitialAvatar = (firstName?: string, lastName?: string) => {
         const initial = (firstName && firstName[0]) || (lastName && lastName[0]) || '?';
@@ -40,78 +36,82 @@ const TransferCreditsPage: React.FC = () => {
 
     const referenceHousehold = familyMembers.length > 0 ? familyMembers[0].household : undefined;
 
-    const toggleRelations = async (nationalId?: string) => {
-        if (!nationalId) return;
-        if (expandedRelationsFor === nationalId) {
-            setExpandedRelationsFor(null);
-            return;
-        }
-        if (!relationsCache[nationalId]) {
-            try {
-                const rel = await getPersonRelationsByNationalId(nationalId);
-                if (rel?.success) {
-                    setRelationsCache(prev => ({ ...prev, [nationalId]: rel }));
-                }
-            } catch (e) {
-                // ignore
-            }
-        }
-        setExpandedRelationsFor(nationalId);
-    };
     useEffect(() => {
         const fetchFamilyMembers = async () => {
             try {
                 setIsLoadingFamily(true);
                 const response = await getFamilyMembers();
-                
+
                 if (response.success) {
                     setFamilyMembers(response.familyMembers || []);
                 } else {
-                    console.error('Failed to load family members:', response.message);
                     setFamilyMembers([]);
                 }
-            } catch (error: any) {
-                console.error('Error fetching family members:', error);
+            } catch {
                 setFamilyMembers([]);
             } finally {
                 setIsLoadingFamily(false);
             }
         };
 
-        if (currentUser) {
-            fetchFamilyMembers();
-        }
+        if (currentUser) fetchFamilyMembers();
     }, [currentUser]);
 
+    // ✅ Build Thai relationship labels
+    useEffect(() => {
+        if (!currentUser || familyMembers.length === 0) return;
 
-    if (!currentUser) {
-        return <div>Loading...</div>;
-    }
+        const map: Record<number, string> = {};
+
+        familyMembers.forEach(member => {
+            map[member.id] = getRelationBetween(currentUser, member);
+        });
+
+        setRelationshipMap(map);
+    }, [currentUser, familyMembers]);
+
+    if (!currentUser) return <div>Loading...</div>;
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        
-        if (!idCardSearch.trim()) {
-            setError('Please enter a search term.');
+
+        const searchTerm = idCardSearch.trim();
+
+        if (!searchTerm) {
+            setError('กรุณากรอกคำค้นหา');
             setSearchedUsers([]);
             return;
         }
-        
+
+        if (searchTerm.length < 2) {
+            setError('กรุณากรอกคำค้นหาอย่างน้อย 2 ตัวอักษร');
+            setSearchedUsers([]);
+            return;
+        }
+
         try {
             setIsSearching(true);
-            const response = await searchUserByIdCard(idCardSearch.trim());
-            
+            const response = await searchUserByIdCard(searchTerm);
+
             if (response.success && response.users) {
-                setSearchedUsers(response.users);
+                const familyMemberIds = new Set(familyMembers.map(m => m.id));
+                const filtered = response.users.filter((u: FamilyMember) => familyMemberIds.has(u.id));
+
+                if (filtered.length > 0) {
+                    setSearchedUsers(filtered);
+                    setError('');
+                } else {
+                    setSearchedUsers([]);
+                    setError('ไม่พบสมาชิกในครอบครัวที่ตรงกับการค้นหา');
+                }
             } else {
                 setSearchedUsers([]);
-                setError(response.message || 'No users found.');
+                setError('ไม่พบสมาชิกในครอบครัวที่ตรงกับการค้นหา');
             }
-        } catch (error: any) {
-            console.error('Error searching users:', error);
+        } catch {
             setSearchedUsers([]);
-            setError('Failed to search users.');
+            setError('เกิดข้อผิดพลาดในการค้นหา กรุณาลองใหม่อีกครั้ง');
         } finally {
             setIsSearching(false);
         }
@@ -123,42 +123,41 @@ const TransferCreditsPage: React.FC = () => {
         setIdCardSearch('');
         setError('');
     };
-    
+
     const clearRecipient = () => {
         setRecipient(null);
         setAmount('');
-    }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!recipient) return;
-        
+
         const transferAmount = parseInt(amount);
+        const currentBalance = walletBalance ?? currentUser.timeCredit;
 
         if (isNaN(transferAmount) || transferAmount <= 0) {
-            showToast('Please enter a valid amount.', 'error');
+            showToast('กรุณากรอกจำนวนที่ถูกต้อง', 'error');
             return;
         }
-        
-        const currentBalance = walletBalance !== null ? walletBalance : currentUser.timeCredit;
+
         if (transferAmount > currentBalance) {
-            showToast("You don't have enough credits for this transfer.", 'error');
+            showToast('คุณมียอดคงเหลือไม่เพียงพอ', 'error');
             return;
         }
-        
+
         try {
             setIsTransferring(true);
             const response = await transferCredits(recipient.id, transferAmount);
-            
+
             if (response.success) {
-                showToast(`Successfully transferred ${amount} credits to ${recipient.first_name} ${recipient.last_name}!`, 'success');
+                showToast(`โอน ${amount} เครดิตให้ ${recipient.first_name} ${recipient.last_name} สำเร็จ!`, 'success');
                 navigate('/timebank');
             } else {
-                showToast(response.message || 'Transfer failed', 'error');
+                showToast(response.message || 'โอนล้มเหลว', 'error');
             }
-        } catch (error: any) {
-            console.error('Error transferring credits:', error);
-            showToast('Transfer failed. Please try again.', 'error');
+        } catch {
+            showToast('เกิดข้อผิดพลาด กรุณาลองใหม่', 'error');
         } finally {
             setIsTransferring(false);
         }
@@ -170,32 +169,30 @@ const TransferCreditsPage: React.FC = () => {
                 <ArrowLeftIcon className="w-5 h-5 mr-2" />
                 กลับไปที่ธนาคารเวลา
             </Link>
-        <h1 className="text-3xl font-bold text-primary-text mb-2">โอนเครดิตเวลา</h1>
-        <p className="text-secondary-text mb-6">คุณสามารถโอนเครดิตให้สมาชิกในครอบครัวเท่านั้น ค้นหาพวกเขาด้วยหมายเลขบัตรประชาชนเพื่อเพิ่ม</p>
-            
+
+            <h1 className="text-3xl font-bold text-primary-text mb-2">โอนเครดิตเวลา</h1>
+            <p className="text-secondary-text mb-6">คุณสามารถโอนเครดิตให้สมาชิกในครอบครัวเท่านั้น</p>
+
             <div className="bg-surface p-6 sm:p-8 rounded-xl shadow-md border border-border-color space-y-8">
                 <div className="text-center bg-accent-light p-4 rounded-lg">
                     <p className="text-secondary-text font-medium">ยอดคงเหลือของคุณ</p>
                     {isLoadingBalance ? (
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
-                      </div>
+                        <div className="flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+                        </div>
                     ) : (
-                      <p className="text-3xl font-bold text-accent">{walletBalance !== null ? walletBalance : currentUser.timeCredit} เครดิต</p>
+                        <p className="text-3xl font-bold text-accent">{walletBalance ?? currentUser.timeCredit} เครดิต</p>
                     )}
                 </div>
 
                 {!recipient ? (
                     <div className="grid md:grid-cols-2 gap-8">
-                        {/* Family Members */}
+
                         <div>
                             <h2 className="text-xl font-semibold mb-3">สมาชิกในครอบครัว</h2>
                             <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
                                 {isLoadingFamily ? (
-                                    <div className="text-center py-4">
-                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent mx-auto"></div>
-                                        <p className="text-secondary-text text-sm mt-2">กำลังโหลดสมาชิกในครอบครัว...</p>
-                                    </div>
+                                    <p className="text-center py-4 text-secondary-text">กำลังโหลด...</p>
                                 ) : familyMembers.length > 0 ? familyMembers.map(member => (
                                     <div key={member.id} className="flex items-center justify-between p-3 bg-background rounded-lg">
                                         <div className="flex items-center space-x-3">
@@ -203,108 +200,61 @@ const TransferCreditsPage: React.FC = () => {
                                             <div>
                                                 <span className="font-semibold text-primary-text">{member.first_name} {member.last_name}</span>
                                                 {member.household !== undefined && (
-                                                    <div className="mt-0.5">
-                                                        <span className={`text-xs px-2 py-0.5 rounded ${referenceHousehold !== undefined && member.household === referenceHousehold ? 'bg-green-100 text-green-700' : 'bg-muted text-secondary-text'}`}>
-                                                        ครัวเรือน: {String(member.household)}
-                                                        </span>
-                                                    </div>
+                                                    <div className="mt-0.5 text-xs text-secondary-text">ครัวเรือน {member.household}</div>
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="text-xs text-accent mt-1">
-  ความสัมพันธ์: {relationshipMap[member.id] || "-"}
-</div>
-                                        <button onClick={() => selectRecipient(member)} className="px-3 py-1 bg-accent text-white font-bold text-sm rounded-md hover:bg-accent-hover">Select</button>
+                                        <div className="text-xs text-accent">ความสัมพันธ์: {relationshipMap[member.id] || '-'}</div>
+                                        <button onClick={() => selectRecipient(member)} className="px-3 py-1 bg-accent text-white rounded-md">เลือก</button>
                                     </div>
-                                )) : <p className="text-secondary-text text-sm p-3 bg-background rounded-lg">No family members added yet.</p>}
+                                )) : (
+                                    <p className="text-secondary-text text-sm p-3 bg-background rounded-lg">ยังไม่มีสมาชิกในครอบครัว</p>
+                                )}
                             </div>
                         </div>
 
-                        {/* Search */}
                         <div>
-                           <h2 className="text-xl font-semibold mb-3">ค้นหาด้วยชื่อหรือบัตรประชาชน</h2>
-                           <form onSubmit={handleSearch} className="flex items-start space-x-2">
-                                <div className="flex-grow">
-                                    <input 
-                                        type="text"
-                                        placeholder="ค้นหาด้วยชื่อหรือหมายเลขบัตรประชาชน 13 หลัก"
-                                        value={idCardSearch}
-                                        onChange={(e) => setIdCardSearch(e.target.value)}
-                                        className="w-full px-4 py-3 bg-background border border-border-color rounded-lg text-primary-text placeholder-secondary-text focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-                                    />
-                                     {error && <p className="text-red-500 text-sm mt-1.5">{error}</p>}
-                                </div>
-                                <button 
-                                    type="submit" 
-                                    disabled={isSearching}
-                                    className="p-3 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                >
-                                    {isSearching ? (
-                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                                    ) : (
-                                        <MagnifyingGlassIcon className="w-6 h-6"/>
-                                    )}
+                            <h2 className="text-xl font-semibold mb-3">ค้นหาด้วยชื่อหรือบัตรประชาชน</h2>
+                            <form onSubmit={handleSearch} className="flex items-start space-x-2">
+                                <input
+                                    type="text"
+                                    placeholder="ค้นหาด้วยชื่อหรือบัตรประชาชน"
+                                    value={idCardSearch}
+                                    onChange={e => setIdCardSearch(e.target.value)}
+                                    className="w-full px-4 py-3 bg-background border border-border-color rounded-lg"
+                                />
+                                <button type="submit" disabled={isSearching} className="p-3 bg-accent text-white rounded-lg">
+                                    {isSearching ? <div className="animate-spin h-6 w-6 border-b-2 border-white rounded-full"></div> : <MagnifyingGlassIcon className="w-6 h-6" />}
                                 </button>
-                           </form>
-                           
-                           {/* Search Results */}
-                           {searchedUsers.length > 0 && (
+                            </form>
+
+                            {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+
+                            {searchedUsers.length > 0 && (
                                 <div className="mt-4 space-y-2 max-h-60 overflow-y-auto">
-                                    {searchedUsers.map(user => {
-                                        const isInFamily = familyMembers.some(m => m.id === user.id);
-                                        return (
-                                        <div key={user.id} className="p-3 bg-background rounded-lg flex items-center justify-between animate-subtle-enter">
+                                    {searchedUsers.map(user => (
+                                        <div key={user.id} className="p-3 bg-background rounded-lg flex items-center justify-between">
                                             <div className="flex items-center space-x-3">
                                                 {renderInitialAvatar(user.first_name, user.last_name)}
                                                 <div>
                                                     <span className="font-semibold text-primary-text">{user.first_name} {user.last_name}</span>
-                                                    <p className="text-xs text-secondary-text">ID: {user.national_id}</p>
                                                     {user.household !== undefined && (
-                                                        <div className="mt-1">
-                                                            <span className={`inline-block text-xs px-2 py-0.5 rounded ${referenceHousehold !== undefined && user.household === referenceHousehold ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                                Household: {String(user.household)} {referenceHousehold !== undefined && user.household === referenceHousehold ? '(same)' : ''}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {!isInFamily && (
-                                                        <span className="block mt-1 text-xs px-2 py-0.5 rounded bg-muted text-secondary-text">ไม่ใช่สมาชิกในครอบครัวของคุณ</span>
-                                                    )}
-                                                    <button onClick={() => toggleRelations(user.national_id)} className="mt-2 text-xs text-accent hover:underline">
-                                                        {expandedRelationsFor === user.national_id ? 'ซ่อนความสัมพันธ์' : 'ดูความสัมพันธ์'}
-                                                    </button>
-                                                    {expandedRelationsFor === user.national_id && relationsCache[user.national_id] && (
-                                                        <div className="mt-2 bg-surface border border-border-color rounded p-2 text-xs text-primary-text">
-                                                            <div>Family ID: {relationsCache[user.national_id].family_id}</div>
-                                                            <div className="mt-1">
-                                                                <span className="font-semibold">พ่อแม่:</span> {relationsCache[user.national_id].parents.map((p: any) => `${p.first_name} ${p.last_name}`).join(', ') || '-'}
-                                                            </div>
-                                                            <div className="mt-1">
-                                                                <span className="font-semibold">พี่น้อง:</span> {relationsCache[user.national_id].siblings.map((p: any) => `${p.first_name} ${p.last_name}`).join(', ') || '-'}
-                                                            </div>
-                                                            <div className="mt-1">
-                                                                <span className="font-semibold">บุตร:</span> {relationsCache[user.national_id].children.map((p: any) => `${p.first_name} ${p.last_name}`).join(', ') || '-'}
-                                                            </div>
-                                                        </div>
+                                                        <div className="mt-0.5 text-xs text-secondary-text">ครัวเรือน {user.household}</div>
                                                     )}
                                                 </div>
                                             </div>
-                                            <button 
-                                                onClick={() => isInFamily && selectRecipient(user)} 
-                                                disabled={!isInFamily}
-                                                className={`px-3 py-1 font-bold text-sm rounded-md ${isInFamily ? 'bg-accent text-white hover:bg-accent-hover' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
-                                            >
-                                                เลือก
-                                            </button>
+                                            <div className="text-xs text-accent">ความสัมพันธ์: {relationshipMap[user.id] || '-'}</div>
+                                            <button onClick={() => selectRecipient(user)} className="px-3 py-1 bg-accent text-white rounded-md">เลือก</button>
                                         </div>
-                                    );})}
+                                    ))}
                                 </div>
-                           )}
+                            )}
                         </div>
                     </div>
                 ) : (
-                    <div className="animate-subtle-enter">
-                         <h2 className="text-xl font-semibold mb-3">Transfer Details</h2>
-                         <div className="bg-background p-4 rounded-lg mb-6 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-xl font-semibold mb-3">รายละเอียดการโอน</h2>
+                        <div className="bg-background p-4 rounded-lg mb-6 flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-secondary-text">ผู้รับ:</p>
                                 <div className="flex items-center space-x-3 mt-1">
@@ -312,35 +262,28 @@ const TransferCreditsPage: React.FC = () => {
                                     <span className="font-bold text-lg text-primary-text">{recipient.first_name} {recipient.last_name}</span>
                                 </div>
                             </div>
-                            <button onClick={clearRecipient} className="text-sm font-semibold text-accent hover:underline">เปลี่ยน</button>
-                         </div>
-                         <form onSubmit={handleSubmit} className="space-y-4">
-                             <FormField
+                            <button onClick={clearRecipient} className="text-sm text-accent underline">เปลี่ยน</button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <FormField
                                 label="จำนวนที่ต้องการโอน"
                                 name="amount"
                                 type="number"
                                 value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
+                                onChange={e => setAmount(e.target.value)}
                                 required
                                 placeholder="เช่น 5"
                             />
-                            <div className="pt-2">
-                                <button
-                                    type="submit"
-                                    disabled={isTransferring}
-                                    className="w-full py-3 bg-accent text-white font-bold text-lg rounded-md hover:bg-accent-hover transition-all duration-300 disabled:bg-gray-300 disabled:cursor-not-allowed transform active:scale-95 shadow-lg shadow-accent/20"
-                                >
-                                    {isTransferring ? (
-                                        <div className="flex items-center justify-center">
-                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                                            กำลังโอน...
-                                        </div>
-                                    ) : (
-                                        `ยืนยันและโอน ${amount && `${amount} เครดิต`}`
-                                    )}
-                                </button>
-                            </div>
-                         </form>
+
+                            <button
+                                type="submit"
+                                disabled={isTransferring}
+                                className="w-full py-3 bg-accent text-white font-bold text-lg rounded-md disabled:bg-gray-300"
+                            >
+                                {isTransferring ? 'กำลังโอน...' : `ยืนยันและโอน ${amount || ''}`}
+                            </button>
+                        </form>
                     </div>
                 )}
             </div>
@@ -349,3 +292,27 @@ const TransferCreditsPage: React.FC = () => {
 };
 
 export default TransferCreditsPage;
+export function getRelationBetween(me: any, target: any): string {
+  if (!me || !target) return "-";
+
+  if (target.parents?.father_id === me.id) return "พ่อ";
+  if (target.parents?.mother_id === me.id) return "แม่";
+
+  if (me.parents?.father_id === target.id) return "ลูก";
+  if (me.parents?.mother_id === target.id) return "ลูก";
+
+  if (
+    me.parents?.father_id &&
+    me.parents.father_id === target.parents?.father_id &&
+    me.parents?.mother_id &&
+    me.parents.mother_id === target.parents?.mother_id &&
+    me.id !== target.id
+  ) return "พี่น้อง";
+
+  if (target.relations?.uncles_aunts?.paternal?.includes(me.id)) return "ลุง/ป้า (ฝั่งพ่อ)";
+  if (target.relations?.uncles_aunts?.maternal?.includes(me.id)) return "น้า/อา (ฝั่งแม่)";
+
+  if (target.relations?.nephews_nieces?.includes(me.id)) return "หลาน";
+
+  return "-";
+}

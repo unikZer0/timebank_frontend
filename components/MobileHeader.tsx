@@ -14,6 +14,7 @@ import {
   CheckCircleIcon,
 } from '@heroicons/react/24/solid';
 import { useUser } from '../context/UserContext';
+import ConfirmDialog from './ConfirmDialog';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
@@ -29,6 +30,7 @@ const MobileHeader: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { currentUser, logout } = useUser();
   const navigate = useNavigate();
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     if (isMenuOpen) {
@@ -43,9 +45,18 @@ const MobileHeader: React.FC = () => {
   }, [isMenuOpen]);
 
   const handleLogout = () => {
+    setShowConfirm(true);
+  };
+
+  const confirmLogout = () => {
+    setShowConfirm(false);
     setIsMenuOpen(false);
     logout();
     navigate('/login');
+  };
+
+  const cancelLogout = () => {
+    setShowConfirm(false);
   };
   
   const handleLinkClick = () => {
@@ -154,6 +165,15 @@ const MobileHeader: React.FC = () => {
             </div>
         </div>
       </aside>
+      <ConfirmDialog
+        isOpen={showConfirm}
+        title="ออกจากระบบ"
+        message="คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?"
+        confirmText="ออกจากระบบ"
+        cancelText="ยกเลิก"
+        onConfirm={confirmLogout}
+        onCancel={cancelLogout}
+      />
     </>
   );
 };

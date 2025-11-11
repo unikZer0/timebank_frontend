@@ -7,6 +7,7 @@ import { useUser } from '../context/UserContext';
 import { getUserProfile, updateUserProfile } from '../services/apiService';
 import ProfilePageSkeleton from '../components/ProfilePageSkeleton';
 import { useToast } from '../context/ToastContext';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const StatItem: React.FC<{ value: number, label: string }> = ({ value, label }) => (
     <div className="flex flex-col items-center text-center">
@@ -41,6 +42,24 @@ const ProfilePage: React.FC = () => {
   const [newSkill, setNewSkill] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [editingPhone, setEditingPhone] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  // Helper function to normalize skills (handle both string and object formats)
+  const normalizeSkill = (skill: any): string => {
+    if (typeof skill === 'string') {
+      return skill;
+    }
+    if (skill && typeof skill === 'object') {
+      return skill.name || skill.skill_name || String(skill);
+    }
+    return String(skill || '');
+  };
+
+  // Helper function to normalize skills array
+  const normalizeSkillsArray = (skills: any[]): string[] => {
+    if (!Array.isArray(skills)) return [];
+    return skills.map(normalizeSkill).filter(Boolean);
+  };
 
   const fetchProfile = async () => {
     if (!currentUser) return;
@@ -50,17 +69,30 @@ const ProfilePage: React.FC = () => {
       const response = await getUserProfile();
       
       if (response.success && response.data) {
-        setProfileData(response.data);
+        // Normalize skills if they come as objects
+        const normalizedData = {
+          ...response.data,
+          skills: normalizeSkillsArray(response.data.skills || [])
+        };
+        setProfileData(normalizedData);
       } else {
         showToast('Failed to load profile data', 'error');
         // Fallback to current user data
-        setProfileData(currentUser);
+        const normalizedUser = {
+          ...currentUser,
+          skills: normalizeSkillsArray(currentUser.skills || [])
+        };
+        setProfileData(normalizedUser);
       }
     } catch (error: any) {
       console.error('Error fetching profile:', error);
       showToast('Failed to load profile data', 'error');
       // Fallback to current user data
-      setProfileData(currentUser);
+      const normalizedUser = {
+        ...currentUser,
+        skills: normalizeSkillsArray(currentUser.skills || [])
+      };
+      setProfileData(normalizedUser);
     } finally {
       setIsLoading(false);
     }
@@ -91,13 +123,22 @@ const ProfilePage: React.FC = () => {
   const user = profileData || currentUser;
 
   const handleLogout = () => {
+    setShowConfirm(true);
+  };
+
+  const confirmLogout = () => {
+    setShowConfirm(false);
     logout();
     navigate('/login');
   };
 
+  const cancelLogout = () => {
+    setShowConfirm(false);
+  };
+
   const handleEditClick = () => {
     setIsEditing(true);
-    setEditingSkills([...user.skills]);
+    setEditingSkills(normalizeSkillsArray(user.skills || []));
     setEditingPhone(user.phone || '');
   };
 
@@ -167,237 +208,245 @@ const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto font-prompt text-primary-text">
-        <div className="bg-surface border border-border-color rounded-2xl shadow-md overflow-hidden">
-            <div className="h-40 bg-muted relative">
-                <div className="absolute top-4 right-4 flex space-x-2">
-                    <button 
-                        onClick={handleEditClick}
-                        className="text-secondary-text hover:text-primary-text bg-surface/50 p-2 rounded-full backdrop-blur-sm transition-colors"
-                    >
-                        <PencilIcon className="w-5 h-5" />
-                    </button>
-                </div>
-                 <div className="absolute -bottom-16 left-1/2 -translate-x-1/2">
-                    <RenderAvatar user={user} />
-                </div>
-            </div>
+    <>
+      <div className="max-w-4xl mx-auto font-prompt text-primary-text">
+          <div className="bg-surface border border-border-color rounded-2xl shadow-md overflow-hidden">
+              <div className="h-40 bg-muted relative">
+                  <div className="absolute top-4 right-4 flex space-x-2">
+                      <button 
+                          onClick={handleEditClick}
+                          className="text-secondary-text hover:text-primary-text bg-surface/50 p-2 rounded-full backdrop-blur-sm transition-colors"
+                      >
+                          <PencilIcon className="w-5 h-5" />
+                      </button>
+                  </div>
+                   <div className="absolute -bottom-16 left-1/2 -translate-x-1/2">
+                      <RenderAvatar user={user} />
+                  </div>
+              </div>
 
-            <div className="pt-20 pb-8 px-6 text-center">
-                <h1 className="text-3xl font-bold text-primary-text">{user.first_name || 'User'} {user.last_name || ''}</h1>
-            </div>
+              <div className="pt-20 pb-8 px-6 text-center">
+                  <h1 className="text-3xl font-bold text-primary-text">{user.first_name || 'User'} {user.last_name || ''}</h1>
+              </div>
 
-            <div className="p-6">
+              <div className="p-6">
 
-                {/* Time Balance */}
-                <div className="mb-8 bg-accent-light rounded-lg p-4">
-                    <h3 className="text-lg font-semibold text-primary-text mb-2">ยอดเครดิตเวลาปัจจุบัน</h3>
-                    <div className="flex items-center">
-                        <ClockIcon className="w-6 h-6 text-accent mr-2" />
-                        <span className="text-2xl font-bold text-accent">{user.timeCredit || 0} ชั่วโมง</span>
-                    </div>
-                    <p className="text-sm text-secondary-text mt-1">พร้อมช่วยเหลือผู้อื่น</p>
-                </div>
+                  {/* Time Balance */}
+                  <div className="mb-8 bg-accent-light rounded-lg p-4">
+                      <h3 className="text-lg font-semibold text-primary-text mb-2">ยอดเครดิตเวลาปัจจุบัน</h3>
+                      <div className="flex items-center">
+                          <ClockIcon className="w-6 h-6 text-accent mr-2" />
+                          <span className="text-2xl font-bold text-accent">{user.timeCredit || 0} ชั่วโมง</span>
+                      </div>
+                      <p className="text-sm text-secondary-text mt-1">พร้อมช่วยเหลือผู้อื่น</p>
+                  </div>
 
-                {/* LINE Account Status */}
-                <div className="mb-8">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-primary-text">บัญชี LINE</h3>
-                        <button
-                            onClick={fetchProfile}
-                            className="text-sm text-accent hover:text-accent-hover flex items-center"
-                        >
-                            <ClockIcon className="w-4 h-4 mr-1" />
-                            รีเฟรช
-                        </button>
-                    </div>
-                    <div className="space-y-3">
-                        {user.line_user_id ? (
-                            <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                                <div className="flex items-center">
-                                    <CheckCircleIcon className="w-5 h-5 text-green-600 mr-3" />
-                                    <span className="text-green-800 font-medium">เชื่อมต่อแล้ว</span>
-                                </div>
-                                <span className="text-xs text-green-600">ID: {user.line_user_id.substring(0, 8)}...</span>
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                <div className="flex items-center">
-                                    <ExclamationTriangleIcon className="w-5 h-5 text-yellow-600 mr-3" />
-                                    <span className="text-yellow-800 font-medium">ยังไม่ได้เชื่อมต่อ</span>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        localStorage.setItem('userEmail', user.email);
-                                        window.location.href = '/link-line';
-                                    }}
-                                    className="px-3 py-1 bg-accent text-white text-sm rounded-md hover:bg-accent-hover transition-colors"
-                                >
-                                    เชื่อมต่อ
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                  {/* LINE Account Status */}
+                  <div className="mb-8">
+                      <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-semibold text-primary-text">บัญชี LINE</h3>
+                          <button
+                              onClick={fetchProfile}
+                              className="text-sm text-accent hover:text-accent-hover flex items-center"
+                          >
+                              <ClockIcon className="w-4 h-4 mr-1" />
+                              รีเฟรช
+                          </button>
+                      </div>
+                      <div className="space-y-3">
+                          {user.line_user_id ? (
+                              <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                                  <div className="flex items-center">
+                                      <CheckCircleIcon className="w-5 h-5 text-green-600 mr-3" />
+                                      <span className="text-green-800 font-medium">เชื่อมต่อแล้ว</span>
+                                  </div>
+                                  <span className="text-xs text-green-600">ID: {user.line_user_id.substring(0, 8)}...</span>
+                              </div>
+                          ) : (
+                              <div className="flex items-center justify-between p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                  <div className="flex items-center">
+                                      <ExclamationTriangleIcon className="w-5 h-5 text-yellow-600 mr-3" />
+                                      <span className="text-yellow-800 font-medium">ยังไม่ได้เชื่อมต่อ</span>
+                                  </div>
+                                  <button
+                                      onClick={() => {
+                                          localStorage.setItem('userEmail', user.email);
+                                          window.location.href = '/link-line';
+                                      }}
+                                      className="px-3 py-1 bg-accent text-white text-sm rounded-md hover:bg-accent-hover transition-colors"
+                                  >
+                                      เชื่อมต่อ
+                                  </button>
+                              </div>
+                          )}
+                      </div>
+                  </div>
 
-                {/* Contact Information */}
-                <div className="mb-8">
-                    <h3 className="text-lg font-semibold text-primary-text mb-4">ข้อมูลติดต่อ</h3>
-                    <div className="space-y-3">
-                        <div className="flex items-center">
-                            <EnvelopeIcon className="w-5 h-5 text-secondary-text mr-3" />
-                            <span className="text-primary-text">{user.email}</span>
-                        </div>
-                        {isEditing ? (
-                            <div className="flex items-center">
-                                <PhoneIcon className="w-5 h-5 text-secondary-text mr-3" />
-                                 <input
-                                     type="tel"
-                                     value={editingPhone}
-                                     onChange={(e) => {
-                                       const value = e.target.value.replace(/\D/g, '').slice(0, 10);
-                                       setEditingPhone(value);
-                                     }}
-                                     className="flex-1 px-3 py-2 border border-border-color rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
-                                     placeholder="0812345678"
-                                     maxLength={10}
-                                 />
-                            </div>
-                        ) : (
-                            user.phone && (
-                                <div className="flex items-center">
-                                    <PhoneIcon className="w-5 h-5 text-secondary-text mr-3" />
-                                    <span className="text-primary-text">{user.phone}</span>
-                                </div>
-                            )
-                        )}
-                    </div>
-                </div>
+                  {/* Contact Information */}
+                  <div className="mb-8">
+                      <h3 className="text-lg font-semibold text-primary-text mb-4">ข้อมูลติดต่อ</h3>
+                      <div className="space-y-3">
+                          <div className="flex items-center">
+                              <EnvelopeIcon className="w-5 h-5 text-secondary-text mr-3" />
+                              <span className="text-primary-text">{user.email}</span>
+                          </div>
+                          {isEditing ? (
+                              <div className="flex items-center">
+                                  <PhoneIcon className="w-5 h-5 text-secondary-text mr-3" />
+                                   <input
+                                       type="tel"
+                                       value={editingPhone}
+                                       onChange={(e) => {
+                                         const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                         setEditingPhone(value);
+                                       }}
+                                       className="flex-1 px-3 py-2 border border-border-color rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
+                                       placeholder="0812345678"
+                                       maxLength={10}
+                                   />
+                              </div>
+                          ) : (
+                              user.phone && (
+                                  <div className="flex items-center">
+                                      <PhoneIcon className="w-5 h-5 text-secondary-text mr-3" />
+                                      <span className="text-primary-text">{user.phone}</span>
+                                  </div>
+                              )
+                          )}
+                      </div>
+                  </div>
 
-                {/* Personal Information */}
-                <div className="mb-8">
-                    <h3 className="text-lg font-semibold text-primary-text mb-4">ข้อมูลส่วนตัว</h3>
-                    <div className="space-y-3">
-                        {user.dob && (
-                            <div className="flex items-center">
-                                <CalendarIcon className="w-5 h-5 text-secondary-text mr-3" />
-                                <span className="text-primary-text">
-                                    วันเกิด: {new Date(user.dob).toLocaleDateString('th-TH', { 
-                                        year: 'numeric', 
-                                        month: 'long', 
-                                        day: 'numeric' 
-                                    })}
-                                </span>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                  {/* Personal Information */}
+                  <div className="mb-8">
+                      <h3 className="text-lg font-semibold text-primary-text mb-4">ข้อมูลส่วนตัว</h3>
+                      <div className="space-y-3">
+                          {user.dob && (
+                              <div className="flex items-center">
+                                  <CalendarIcon className="w-5 h-5 text-secondary-text mr-3" />
+                                  <span className="text-primary-text">
+                                      วันเกิด: {new Date(user.dob).toLocaleDateString('th-TH', { 
+                                          year: 'numeric', 
+                                          month: 'long', 
+                                          day: 'numeric' 
+                                      })}
+                                  </span>
+                              </div>
+                          )}
+                      </div>
+                  </div>
 
-                {/* Member Since */}
-                <div className="mb-8">
-                    <h3 className="text-lg font-semibold text-primary-text mb-3">เป็นสมาชิกตั้งแต่</h3>
-                    <div className="flex items-center">
-                        <CalendarIcon className="w-5 h-5 text-secondary-text mr-3" />
-                        <span className="text-primary-text">
-                            {new Date(user.created_at || Date.now()).toLocaleDateString('th-TH', { 
-                                year: 'numeric', 
-                                month: 'long', 
-                                day: 'numeric' 
-                            })}
-                        </span>
-                    </div>
-                </div>
+                  {/* Member Since */}
+                  <div className="mb-8">
+                      <h3 className="text-lg font-semibold text-primary-text mb-3">เป็นสมาชิกตั้งแต่</h3>
+                      <div className="flex items-center">
+                          <CalendarIcon className="w-5 h-5 text-secondary-text mr-3" />
+                          <span className="text-primary-text">
+                              {new Date(user.created_at || Date.now()).toLocaleDateString('th-TH', { 
+                                  year: 'numeric', 
+                                  month: 'long', 
+                                  day: 'numeric' 
+                              })}
+                          </span>
+                      </div>
+                  </div>
 
-                <div className="mt-8">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-semibold text-primary-text">ทักษะ</h2>
-                        {isEditing && (
-                            <div className="flex space-x-2">
-                                <button
-                                    onClick={handleSaveProfile}
-                                    disabled={isSaving}
-                                    className="flex items-center px-3 py-1 bg-accent text-white text-sm font-medium rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50"
-                                >
-                                    <CheckIcon className="w-4 h-4 mr-1" />
-                                    {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
-                                </button>
-                                <button
-                                    onClick={handleCancelEdit}
-                                    className="flex items-center px-3 py-1 bg-gray-500 text-white text-sm font-medium rounded-md hover:bg-gray-600 transition-colors"
-                                >
-                                    <XMarkIcon className="w-4 h-4 mr-1" />
-                                    ยกเลิก
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                    
-                    {isEditing ? (
-                        <div className="space-y-4">
-                            {/* Add new skill input */}
-                            <div className="space-y-2">
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={newSkill}
-                                        onChange={(e) => setNewSkill(e.target.value)}
-                                        onKeyPress={handleKeyPress}
-                                        placeholder="เพิ่มทักษะใหม่..."
-                                        className="flex-1 px-3 py-2 border border-border-color rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
-                                    />
-                                    <button
-                                        onClick={handleAddSkill}
-                                        disabled={!newSkill.trim() || editingSkills.includes(newSkill.trim()) || editingSkills.length >= 3}
-                                        className="px-4 py-2 bg-accent text-white font-medium rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <PlusIcon className="w-4 h-4" />
-                                    </button>
-                                </div>
-                                <p className="text-xs text-secondary-text">
-                                    ทักษะ: {editingSkills.length}/3
-                                    {editingSkills.length >= 3 && (
-                                        <span className="text-red-500 ml-2">• ถึงขีดจำกัดแล้ว</span>
-                                    )}
-                                </p>
-                            </div>
-                            
-                            {/* Skills list with delete buttons */}
-                            <div className="flex flex-wrap gap-3">
-                                {editingSkills.map(skill => (
-                                    <div key={skill} className="flex items-center bg-muted text-primary-text text-base font-medium px-4 py-2 rounded-full">
-                                        <span>{skill}</span>
-                                        <button
-                                            onClick={() => handleRemoveSkill(skill)}
-                                            className="ml-2 text-red-500 hover:text-red-700 transition-colors"
-                                        >
-                                            <XMarkIcon className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                ))}
-                                {editingSkills.length === 0 && (
-                                    <p className="text-secondary-text">ยังไม่ได้เพิ่มทักษะ</p>
-                                )}
-                            </div>
-                        </div>
-                    ) : (
-                    <div className="flex flex-wrap gap-3">
-                        {user.skills.length > 0 ? user.skills.map(skill => (
-                        <span key={skill} className="bg-muted text-primary-text text-base font-medium px-4 py-2 rounded-full">
-                            {skill}
-                        </span>
-                        )) : <p className="text-secondary-text">ยังไม่มีทักษะที่ระบุ</p>}
-                    </div>
-                    )}
-                </div>
-                 <div className="mt-8 border-t border-border-color pt-6 flex justify-center">
-                    <button onClick={handleLogout} className="flex items-center space-x-2 px-6 py-3 bg-red-50 text-red-600 font-bold rounded-lg hover:bg-red-100 transition-colors">
-                        <ArrowRightOnRectangleIcon className="w-6 h-6"/>
-                        <span>ออกจากระบบ</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+                  <div className="mt-8">
+                      <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-xl font-semibold text-primary-text">ทักษะ</h2>
+                          {isEditing && (
+                              <div className="flex space-x-2">
+                                  <button
+                                      onClick={handleSaveProfile}
+                                      disabled={isSaving}
+                                      className="flex items-center px-3 py-1 bg-accent text-white text-sm font-medium rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50"
+                                  >
+                                      <CheckIcon className="w-4 h-4 mr-1" />
+                                      {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
+                                  </button>
+                                  <button
+                                      onClick={handleCancelEdit}
+                                      className="flex items-center px-3 py-1 bg-gray-500 text-white text-sm font-medium rounded-md hover:bg-gray-600 transition-colors"
+                                  >
+                                      <XMarkIcon className="w-4 h-4 mr-1" />
+                                      ยกเลิก
+                                  </button>
+                              </div>
+                          )}
+                      </div>
+                      
+                      {isEditing ? (
+                          <div className="space-y-4">
+                              {/* Add new skill input */}
+                              <div className="space-y-2">
+                                  <div className="flex gap-2">
+                                      <input
+                                          type="text"
+                                          value={newSkill}
+                                          onChange={(e) => setNewSkill(e.target.value)}
+                                          onKeyPress={handleKeyPress}
+                                          placeholder="เพิ่มทักษะใหม่..."
+                                          className="flex-1 px-3 py-2 border border-border-color rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                                      />
+                                      <button
+                                          onClick={handleAddSkill}
+                                          disabled={!newSkill.trim() || editingSkills.includes(newSkill.trim()) || editingSkills.length >= 3}
+                                          className="px-4 py-2 bg-accent text-white font-medium rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                          <PlusIcon className="w-4 h-4" />
+                                      </button>
+                                  </div>
+                                  <p className="text-xs text-secondary-text">
+                                      ทักษะ: {editingSkills.length}/3
+                                      {editingSkills.length >= 3 && (
+                                          <span className="text-red-500 ml-2">• ถึงขีดจำกัดแล้ว</span>
+                                      )}
+                                  </p>
+                              </div>
+                              
+                              {/* Skills list with delete buttons */}
+                              <div className="flex flex-wrap gap-3">
+                                  {editingSkills.map(skill => (
+                                      <div key={skill} className="flex items-center bg-muted text-primary-text text-base font-medium px-4 py-2 rounded-full">
+                                          <span>{skill}</span>
+                                          <button
+                                              onClick={() => handleRemoveSkill(skill)}
+                                              className="ml-2 text-red-500 hover:text-red-700 transition-colors"
+                                          >
+                                              <XMarkIcon className="w-4 h-4" />
+                                          </button>
+                                      </div>
+                                  ))}
+                                  {editingSkills.length === 0 && (
+                                      <p className="text-secondary-text">ยังไม่ได้เพิ่มทักษะ</p>
+                                  )}
+                              </div>
+                          </div>
+                      ) : (
+                      <div className="flex flex-wrap gap-3">
+                          {(() => {
+                              const normalizedSkills = normalizeSkillsArray(user.skills || []);
+                              return normalizedSkills.length > 0 ? normalizedSkills.map((skill, index) => (
+                                  <span key={`${skill}-${index}`} className="bg-muted text-primary-text text-base font-medium px-4 py-2 rounded-full">
+                                      {skill}
+                                  </span>
+                              )) : <p className="text-secondary-text">ยังไม่มีทักษะที่ระบุ</p>;
+                          })()}
+                      </div>
+                      )}
+                  </div>
+              </div>
+          </div>
+      </div>
+      <ConfirmDialog
+        isOpen={showConfirm}
+        title="ออกจากระบบ"
+        message="คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?"
+        confirmText="ออกจากระบบ"
+        cancelText="ยกเลิก"
+        onConfirm={confirmLogout}
+        onCancel={cancelLogout}
+      />
+    </>
   );
 };
 

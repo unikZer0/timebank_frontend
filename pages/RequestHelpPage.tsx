@@ -26,6 +26,34 @@ const RequestHelpPage: React.FC = () => {
   const { currentUser } = useUser();
   const { showToast } = useToast();
 
+  // Helper function to normalize skills (handle both string and object formats)
+  const normalizeSkill = (skill: any): string | null => {
+    if (typeof skill === 'string') {
+      return skill.trim();
+    }
+    if (skill && typeof skill === 'object') {
+      if (typeof skill.name === 'string') {
+        return skill.name.trim();
+      }
+      if (typeof skill.skill_name === 'string') {
+        return skill.skill_name.trim();
+      }
+    }
+    if (skill != null && typeof skill.toString === 'function') {
+      return String(skill).trim();
+    }
+    return null;
+  };
+
+  // Helper function to normalize skills array
+  const normalizeSkillsArray = (skills: any[]): string[] => {
+    if (!Array.isArray(skills)) return [];
+    return skills
+      .map(normalizeSkill)
+      .filter((skill): skill is string => Boolean(skill))
+      .sort();
+  };
+
   // Fetch available skills from user profiles
   useEffect(() => {
     const fetchSkills = async () => {
@@ -34,18 +62,19 @@ const RequestHelpPage: React.FC = () => {
         const response = await getAllUserSkills();
         
         if (response.success && response.skills && Array.isArray(response.skills)) {
-          // Skills are already unique from the API, just sort them
-          setAvailableSkills(response.skills.sort());
+          // Normalize skills (handle both string and object formats)
+          const normalizedSkills = normalizeSkillsArray(response.skills);
+          setAvailableSkills(normalizedSkills);
         } else {
           // No skills available in database
           setAvailableSkills([]);
-          showToast('No skills available in the system yet', 'info');
+          showToast('ยังไม่มีทักษะในระบบ', 'info');
         }
       } catch (error) {
         console.error('Error fetching skills:', error);
         // No fallback - just show empty list
         setAvailableSkills([]);
-        showToast('Failed to load skills from database', 'error');
+        showToast('โหลดทักษะจากฐานข้อมูลล้มเหลว', 'error');
       } finally {
         setSkillsLoading(false);
       }
@@ -92,7 +121,7 @@ const RequestHelpPage: React.FC = () => {
     
     // Validate that both times are provided
     if (!formData.start_time || !formData.end_time) {
-      showToast('Please select both start time and end time', 'error');
+      showToast('กรุณาเลือกทั้งเวลาเริ่มต้นและเวลาสิ้นสุด', 'error');
       return;
     }
     
@@ -100,7 +129,7 @@ const RequestHelpPage: React.FC = () => {
     const duration = calculateDuration(formData.start_time, formData.end_time);
     
     if (duration <= 0) {
-      showToast('Start time must be before end time', 'error');
+      showToast('เวลาเริ่มต้นต้องมาก่อนเวลาสิ้นสุด', 'error');
       return;
     }
     
@@ -118,12 +147,12 @@ const RequestHelpPage: React.FC = () => {
       
       const response = await createJob(jobData);
       
-      showToast('Your job request has been posted successfully!', 'success');
+      showToast('โพสต์คำขอความช่วยเหลือสำเร็จแล้ว!', 'success');
       navigate('/my-jobs'); // Navigate to My Jobs page to see the status
       
     } catch (error: any) {
       console.error('Error creating job:', error);
-      showToast(error?.data?.message || 'Failed to create job request', 'error');
+      showToast(error?.data?.message || 'สร้างคำขอความช่วยเหลือล้มเหลว', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -133,20 +162,20 @@ const RequestHelpPage: React.FC = () => {
 
   return (
     <div className="max-w-2xl mx-auto font-prompt">
-       <h1 className="text-3xl font-bold text-primary-text mb-6">Post a Help Request</h1>
+       <h1 className="text-3xl font-bold text-primary-text mb-6">โพสต์คำขอความช่วยเหลือ</h1>
       <form onSubmit={handleSubmit} className="bg-surface p-8 rounded-xl shadow-md border border-border-color space-y-6">
         <FormField 
-            label="What do you need help with?"
+            label="คุณต้องการความช่วยเหลือเรื่องอะไร?"
             name="title" 
             value={formData.title} 
             onChange={handleChange} 
             required 
-            placeholder="e.g., Teach me how to use a smartphone"
+            placeholder="เช่น สอนวิธีใช้สมาร์ทโฟน"
         />
                     {/* Time Range Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-secondary-text font-medium mb-2">Start Time <span className="text-red-500">*</span></label>
+                <label className="block text-secondary-text font-medium mb-2">เวลาเริ่มต้น <span className="text-red-500">*</span></label>
                 <input 
                   name="start_time" 
                   type="time" 
@@ -158,7 +187,7 @@ const RequestHelpPage: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-secondary-text font-medium mb-2">End Time <span className="text-red-500">*</span></label>
+                <label className="block text-secondary-text font-medium mb-2">เวลาสิ้นสุด <span className="text-red-500">*</span></label>
                 <input 
                   name="end_time" 
                   type="time" 
@@ -171,7 +200,7 @@ const RequestHelpPage: React.FC = () => {
               </div>
             </div>
          <div>
-              <label className="block text-secondary-text font-medium mb-2">Estimated Duration</label>
+              <label className="block text-secondary-text font-medium mb-2">ระยะเวลาโดยประมาณ</label>
               <div className="flex">
                 <input 
                     name="duration" 
@@ -180,12 +209,12 @@ const RequestHelpPage: React.FC = () => {
                     onChange={handleChange} 
                     className="w-1/2 bg-surface border border-border-color rounded-l-lg text-primary-text placeholder-secondary-text/70 focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all duration-300 px-4 py-3" 
                     required 
-                    placeholder="e.g., 2"
+                    placeholder="เช่น 2"
                     readOnly
                 />
-                <span className="px-4 py-3 border-y border-r border-border-color bg-background text-secondary-text rounded-r-lg">Hours</span>
+                <span className="px-4 py-3 border-y border-r border-border-color bg-background text-secondary-text rounded-r-lg">ชั่วโมง</span>
               </div>
-              <p className="text-xs text-accent mt-1">✨ Duration calculated automatically from time range</p>
+              <p className="text-xs text-accent mt-1">✨ ระยะเวลาคำนวณอัตโนมัติจากช่วงเวลา</p>
             </div>
   
             
@@ -194,25 +223,25 @@ const RequestHelpPage: React.FC = () => {
               options={availableSkills}
               selectedValues={formData.required_skills}
               onSelectionChange={handleSkillsChange}
-              placeholder="Search and select required skills..."
-              label="Required Skills (Optional)"
+              placeholder="ค้นหาและเลือกทักษะที่ต้องการ..."
+              label="ทักษะที่ต้องการ (ไม่บังคับ)"
               loading={skillsLoading}
             />
             {!skillsLoading && availableSkills.length === 0 && (
               <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-yellow-800 text-sm">
-                  <strong>No skills available yet.</strong> Skills will appear here as users add them to their profiles.
+                  <strong>ยังไม่มีทักษะในระบบ</strong> ทักษะจะปรากฏที่นี่เมื่อผู้ใช้เพิ่มทักษะในโปรไฟล์ของพวกเขา
                 </p>
               </div>
             )}
         <FormTextArea
-            label="Add more details"
+            label="เพิ่มรายละเอียดเพิ่มเติม"
             name="description" 
             value={formData.description} 
             onChange={handleChange} 
             rows={5}
             required
-            placeholder="Describe what you need help with..."
+            placeholder="อธิบายสิ่งที่คุณต้องการความช่วยเหลือ..."
         />
         <div className="pt-2">
             <button 
@@ -220,7 +249,7 @@ const RequestHelpPage: React.FC = () => {
                 disabled={isFormInvalid || isSubmitting}
                 className="w-full py-3 bg-accent text-white font-bold text-lg rounded-md hover:bg-accent-hover transition-all duration-300 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed transform active:scale-95 shadow-lg shadow-accent/20"
             >
-                {isSubmitting ? 'Posting...' : 'Post Request'}
+                {isSubmitting ? 'กำลังโพสต์...' : 'โพสต์คำขอ'}
             </button>
         </div>
       </form>

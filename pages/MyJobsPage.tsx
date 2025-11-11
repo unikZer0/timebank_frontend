@@ -334,13 +334,11 @@ const MyJobsPage: React.FC = () => {
                     <div className="mb-4">
                       <div className="flex flex-wrap gap-1">
                         {job.required_skills.slice(0, 3).map((skill, index) => (
-                          <span 
-                            key={index}
-                            className="px-2 py-1 bg-accent-light text-accent text-xs rounded-full"
-                          >
-                            {skill}
-                          </span>
-                        ))}
+  <span key={typeof skill === 'object' ? skill.id : index} className="px-2 py-1 bg-accent-light text-accent text-xs rounded-full">
+    {typeof skill === 'string' ? skill : skill.name}
+  </span>
+))}
+
                         {job.required_skills.length > 3 && (
                           <span className="px-2 py-1 bg-muted text-secondary-text text-xs rounded-full">
                             +{job.required_skills.length - 3} more
@@ -441,14 +439,14 @@ const MyJobsPage: React.FC = () => {
                       {application.skills && application.skills.length > 0 && (
                         <div className="mb-3">
                           <div className="flex flex-wrap gap-2">
-                            {application.skills.slice(0, 3).map((skill, index) => (
-                              <span 
-                                key={index}
-                                className="px-2 py-1 bg-accent-light text-accent text-xs rounded-full"
-                              >
-                                {skill}
-                              </span>
-                            ))}
+                            {application.skills.map((skill, index) => (
+  <span
+    key={typeof skill === 'object' ? skill.id : index}
+    className="px-2 py-1 bg-accent-light text-accent text-xs rounded-full"
+  >
+    {typeof skill === 'string' ? skill : skill.name}
+  </span>
+))}
                             {application.skills.length > 3 && (
                               <span className="px-2 py-1 bg-muted text-secondary-text text-xs rounded-full">
                                 +{application.skills.length - 3} more
